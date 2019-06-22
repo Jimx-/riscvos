@@ -1,12 +1,16 @@
 AS	= riscv64-unknown-elf-as
 CC	= riscv64-unknown-elf-gcc
 LD	= riscv64-unknown-elf-ld
-CFLAGS = -fno-builtin -fno-stack-protector -fpack-struct -Wall -mcmodel=medany
+CFLAGS = -fno-builtin -fno-stack-protector -fpack-struct -Wall -mcmodel=medany -Ilibfdt
 LDFLAGS = -T riscvos.lds -Map System.map
+
+include libfdt/Makefile.libfdt
 
 SRC_PATH	= .
 BUILD_PATH  = ./obj
-SRCS		= head.S main.c vm.c global.c direct_tty.c lib/vsprintf.c
+LIBSRCS		= lib/vsprintf.c lib/strlen.c lib/memcpy.c lib/memcmp.c lib/memchr.c lib/memmove.c lib/memset.c lib/strnlen.c lib/strrchr.c lib/strtoul.c lib/strchr.c lib/strcmp.c
+EXTSRCS		= $(patsubst %.c, libfdt/%.c, $(LIBFDT_SRCS))
+SRCS		= head.S main.c fdt.c vm.c global.c direct_tty.c memory.c $(LIBSRCS) $(EXTSRCS)
 OBJS		= $(patsubst %.c, $(BUILD_PATH)/%.o, $(patsubst %.S, $(BUILD_PATH)/%.o, $(patsubst %.asm, $(BUILD_PATH)/%.o, $(SRCS))))
 DEPS		= $(OBJS:.o=.d)
 
@@ -34,6 +38,7 @@ $(KERNEL) : $(OBJS)
 $(BUILD_PATH) :
 	mkdir $(BUILD_PATH)
 	mkdir $(BUILD_PATH)/lib
+	mkdir $(BUILD_PATH)/libfdt
 
 -include $(DEPS)
 

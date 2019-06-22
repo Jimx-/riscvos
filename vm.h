@@ -73,6 +73,9 @@ static inline pte_t pfn_pte(unsigned long pfn, unsigned long prot)
     return (pfn << PG_PFN_SHIFT) | prot;
 }
 
+#define __pa(x) ((void*) ((unsigned long)(x) - va_pa_offset))
+#define __va(x) ((void*) ((unsigned long)(x) + va_pa_offset))
+
 #endif
 
 #endif
