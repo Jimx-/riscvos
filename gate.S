@@ -1,4 +1,7 @@
     .section .user_text
 
-syscall2:
+    .globl __syscall
+
+__syscall:
     scall
+    ret

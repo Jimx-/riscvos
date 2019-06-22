@@ -43,9 +43,9 @@ SECTIONS{
     . = ALIGN(4096);
     .user_data : {
         __user_global_pointer$ = . + 0x800;
-        _data = .;
-         *(.data)
-        _edata = .;
+        _user_data = .;
+         *(.user_data)
+        _user_edata = .;
     }
 
     _KERN_SIZE = . - _VIR_BASE;

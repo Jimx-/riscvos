@@ -1,3 +1,4 @@
+#include "const.h"
 #include "fdt.h"
 #include "global.h"
 #include "proto.h"
@@ -76,7 +77,8 @@ static int fdt_scan_memory(void* blob, unsigned long offset, const char* name,
         memmap_count++;
     }
 
-    cut_memmap((unsigned long)__pa(&_start), (unsigned long)__pa(&_end));
+    cut_memmap((unsigned long)__pa(&_start),
+               roundup((unsigned long)__pa(&_end), PG_SIZE));
 
     unsigned long memory_size = 0;
     printk("Physical RAM map:\n");
@@ -118,4 +120,12 @@ void init_memory(void* dtb)
 {
     of_scan_fdt(fdt_scan_root, NULL, dtb);
     of_scan_fdt(fdt_scan_memory, NULL, dtb);
+}
+
+void copy_from_user(void* dst, const void* src, size_t len)
+{
+    /* TODO: check if user address is valid */
+    enable_user_access();
+    memcpy(dst, src, len);
+    disable_user_access();
 }

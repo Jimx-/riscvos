@@ -3,12 +3,15 @@
 
 #include "proc.h"
 
+#include <stddef.h>
+
 void disp_char(const char c);
 void direct_put_str(const char* str);
 int printk(const char* fmt, ...);
 
 void init_memory(void* dtb);
 void* alloc_page(unsigned long* phys_addr);
+void copy_from_user(void* dst, const void* src, size_t len);
 
 void vm_map(struct proc* p, unsigned long phys_addr, void* vir_addr, void* vir_end);
 

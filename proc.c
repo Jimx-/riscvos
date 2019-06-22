@@ -37,7 +37,8 @@ void switch_to_user()
 static void spawn_init()
 {
     /* setup everything for the INIT process */
-    extern char _user_text, _user_etext;
+    extern char _user_text, _user_etext, _user_data, _user_edata,
+        __user_global_pointer$;
     struct proc* p = &proc_table[0];
 
     p->state &= ~PST_FREESLOT;
@@ -51,10 +52,18 @@ static void spawn_init()
     unsigned long user_text_end = (unsigned long)__pa(&_user_etext);
     unsigned long user_text_size =
         roundup(user_text_end - user_text_start, PG_SIZE);
+    unsigned long user_data_start = (unsigned long)__pa(&_user_data);
+    unsigned long user_data_end = (unsigned long)__pa(&_user_edata);
+    unsigned long user_data_size =
+        roundup(user_data_end - user_data_start, PG_SIZE);
 
     vm_map(p, user_text_start, (void*)INIT_ENTRY_POINT,
            (void*)(INIT_ENTRY_POINT + user_text_size));
+    vm_map(p, user_data_start, (void*)(INIT_ENTRY_POINT + user_text_size),
+           (void*)(INIT_ENTRY_POINT + user_text_size + user_data_size));
     p->regs.sepc = INIT_ENTRY_POINT;
+    p->regs.gp = (unsigned long)&__user_global_pointer$ -
+                 (unsigned long)&_user_text + INIT_ENTRY_POINT;
 
     /* allocate stack */
     vm_map(p, 0, (void*)(KERNEL_VMA - PG_SIZE), (void*)KERNEL_VMA);

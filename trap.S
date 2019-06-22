@@ -1,4 +1,5 @@
     #include "csr.h"
+    #include "const.h"
     #include "reg_offsets.h"
 
     .section .text
@@ -121,8 +122,21 @@ do_syscall:
     sd s1, SEPCREG(tp)
 
     /* a1 is the call_nr passed by user */
-    mv a2, tp
-    call handle_sys_call
+	li t0, NR_SYSCALLS
+	la s0, sys_nop
+	/* syscall number held in a1 */
+	bgeu a0, t0, 1f
+	la s0, syscall_table
+	slli t0, a0, 3
+	add s0, s0, t0
+	ld s0, 0(s0)
+1:
+    /* replace syscall number with pointer to current proc */
+    mv a0, tp
+	jalr s0
+
+    /* save return value */
+    sd a0, A0REG(tp)
 
     tail switch_to_user
 
