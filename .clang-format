@@ -1,0 +1,22 @@
+BasedOnStyle: LLVM
+PointerAlignment: Left
+
+UseTab: Never
+IndentWidth: 4
+TabWidth: 4
+
+MaxEmptyLinesToKeep: 1
+
+AllowShortFunctionsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: false
+
+AlignTrailingComments: true
+AlignEscapedNewlines: true
+
+SpacesInParentheses: false
+
+BreakBeforeBraces: Linux
+IndentCaseLabels: false
+
+ReflowComments: true
