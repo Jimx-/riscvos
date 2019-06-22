@@ -1,6 +1,8 @@
 #ifndef _VM_H_
 #define _VM_H_
 
+#include "csr.h"
+
 /* If we use all 64 bits in the address, there will be 2^64 bytes directly
  * addressable, which is far beyond possible physical RAM size but */
 #define KERNEL_VMA \
@@ -75,6 +77,33 @@ static inline pte_t pfn_pte(unsigned long pfn, unsigned long prot)
 
 #define __pa(x) ((void*) ((unsigned long)(x) - va_pa_offset))
 #define __va(x) ((void*) ((unsigned long)(x) + va_pa_offset))
+
+static inline void enable_user_access()
+{
+    __asm__ __volatile__ ("csrs sstatus, %0" : : "r" (SR_SUM) : "memory");
+}
+
+static inline void disable_user_access()
+{
+    __asm__ __volatile__ ("csrc sstatus, %0" : : "r" (SR_SUM) : "memory");
+}
+
+static inline void flush_tlb()
+{
+    __asm__ __volatile__ ("sfence.vma" : : : "memory");
+}
+
+static inline unsigned long read_ptbr()
+{
+    unsigned long ptbr = csr_read(sptbr);
+    return (unsigned long) ((ptbr & SATP_PPN) << PG_SHIFT);
+}
+
+static inline void write_ptbr(unsigned long ptbr)
+{
+    flush_tlb();
+    csr_write(sptbr, (ptbr >> PG_SHIFT) | SATP_MODE);
+}
 
 #endif
 

@@ -1,6 +1,8 @@
 #include "vm.h"
 #include "global.h"
-#include "stdint.h" /* for uintptr_t */
+#include "proc.h"
+
+#include <stdint.h> /* for uintptr_t */
 
 pde_t initial_pgd[NUM_DIR_ENTRIES] __attribute__((aligned(PG_SIZE)));
 
@@ -30,4 +32,8 @@ void setup_paging()
     for (i = 0; i < sizeof(initial_pmd) / sizeof(pmde_t); i++) {
         initial_pmd[i] = pfn_pmde((pa_start + i * PMD_SIZE) >> PG_SHIFT, prot);
     }
+}
+
+void switch_address_space(struct proc* p) {
+    write_ptbr(p->segs.ptbr_phys);
 }

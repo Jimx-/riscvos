@@ -1,5 +1,6 @@
 #include "fdt.h"
 #include "global.h"
+#include "proto.h"
 
 #include <stdint.h>
 

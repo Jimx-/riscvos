@@ -2,9 +2,10 @@
     #include "csr.h"
     #include "vm.h"
 
-.section .head
+    .section .head
 
-.globl _start	/* entry point */
+    .globl _start/* entry point */
+    .globl KStackTop /* kernel stack */
 
 _start:
     /* mask interrupts */
@@ -58,7 +59,7 @@ enable_paging:
     sfence.vma
     csrw sptbr, a2
 
-.align 2
+.align 4
 1:
     /* reload global pointer */
 .option push

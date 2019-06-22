@@ -7,6 +7,10 @@
 #define EXTERN extern
 #endif
 
+#include "proc.h"
+
 EXTERN unsigned long va_pa_offset;
+
+EXTERN struct proc proc_table[PROC_MAX];
 
 #endif
