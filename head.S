@@ -68,7 +68,6 @@ enable_paging:
 
     ret
 
-csrw stvec, a0
 .section .data
 KStackSpace:
     .zero KSTACK_SIZE

@@ -6,7 +6,7 @@ LDFLAGS = -T riscvos.lds -Map System.map
 
 SRC_PATH	= .
 BUILD_PATH  = ./obj
-SRCS		= head.S main.c vm.c global.c direct_tty.c
+SRCS		= head.S main.c vm.c global.c direct_tty.c lib/vsprintf.c
 OBJS		= $(patsubst %.c, $(BUILD_PATH)/%.o, $(patsubst %.S, $(BUILD_PATH)/%.o, $(patsubst %.asm, $(BUILD_PATH)/%.o, $(SRCS))))
 DEPS		= $(OBJS:.o=.d)
 
@@ -33,6 +33,7 @@ $(KERNEL) : $(OBJS)
 
 $(BUILD_PATH) :
 	mkdir $(BUILD_PATH)
+	mkdir $(BUILD_PATH)/lib
 
 -include $(DEPS)
 
