@@ -8,6 +8,9 @@ void direct_put_str(const char* str);
 int printk(const char* fmt, ...);
 
 void init_memory(void* dtb);
+void* alloc_page(unsigned long* phys_addr);
+
+void vm_map(struct proc* p, unsigned long phys_addr, void* vir_addr, void* vir_end);
 
 void init_proc();
 struct proc* pick_proc();

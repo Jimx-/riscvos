@@ -1,13 +1,34 @@
 #include "fdt.h"
 #include "global.h"
 #include "proto.h"
+#include "vm.h"
 
 #include <stdint.h>
 
-int dt_root_addr_cells, dt_root_size_cells;
+#define MEMMAP_MAX 10
+static struct memmap_entry {
+    unsigned long base, size;
+} memmaps[MEMMAP_MAX];
+static int memmap_count;
 
-int fdt_scan_root(void* blob, unsigned long offset, const char* name, int depth,
-                  void* arg)
+static int dt_root_addr_cells, dt_root_size_cells;
+
+static void cut_memmap(unsigned long start, unsigned long end)
+{
+    int i;
+
+    for (i = 0; i < memmap_count; i++) {
+        struct memmap_entry* entry = &memmaps[i];
+        unsigned long mmap_end = entry->base + entry->size;
+        if (start >= entry->base && end <= mmap_end) {
+            entry->base = end;
+            entry->size = mmap_end - entry->base;
+        }
+    }
+}
+
+static int fdt_scan_root(void* blob, unsigned long offset, const char* name,
+                         int depth, void* arg)
 {
     if (depth != 0) return 0;
 
@@ -29,6 +50,7 @@ int fdt_scan_root(void* blob, unsigned long offset, const char* name, int depth,
 static int fdt_scan_memory(void* blob, unsigned long offset, const char* name,
                            int depth, void* arg)
 {
+    extern char _start, _end;
     const char* type = fdt_getprop(blob, offset, "device_type", NULL);
     if (!type || strcmp(type, "memory") != 0) return 0;
 
@@ -39,8 +61,6 @@ static int fdt_scan_memory(void* blob, unsigned long offset, const char* name,
 
     lim = reg + (len / sizeof(uint32_t));
 
-    unsigned long memory_size = 0;
-    printk("Physical RAM map:\n");
     while ((int)(lim - reg) >= (dt_root_addr_cells + dt_root_size_cells)) {
         uint64_t base, size;
 
@@ -50,13 +70,48 @@ static int fdt_scan_memory(void* blob, unsigned long offset, const char* name,
         reg += dt_root_size_cells;
 
         if (size == 0) continue;
-        memory_size += size;
 
-        printk("  mem[0x%016lx - 0x%016lx] usable\n", base, base + size);
+        memmaps[memmap_count].base = base;
+        memmaps[memmap_count].size = size;
+        memmap_count++;
+    }
+
+    cut_memmap((unsigned long)__pa(&_start), (unsigned long)__pa(&_end));
+
+    unsigned long memory_size = 0;
+    printk("Physical RAM map:\n");
+    int i;
+    for (i = 0; i < memmap_count; i++) {
+        struct memmap_entry* entry = &memmaps[i];
+        memory_size += entry->size;
+        printk("  mem[0x%016lx - 0x%016lx] usable\n", entry->base,
+               entry->base + entry->size);
     }
     printk("Memory size: %dk\n", memory_size / 1024);
 
     return 0;
+}
+
+void* alloc_page(unsigned long* phys_addr)
+{
+    int i;
+
+    for (i = memmap_count - 1; i >= 0; i--) {
+        struct memmap_entry* entry = &memmaps[i];
+
+        if (!(entry->base % PG_SIZE) && (entry->size >= PG_SIZE)) {
+            entry->base += PG_SIZE;
+            entry->size -= PG_SIZE;
+
+            unsigned long pa = entry->base - PG_SIZE;
+            if (phys_addr) {
+                *phys_addr = pa;
+            }
+            return __va(pa);
+        }
+    }
+
+    return NULL;
 }
 
 void init_memory(void* dtb)

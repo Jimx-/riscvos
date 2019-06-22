@@ -59,6 +59,12 @@ typedef unsigned long pte_t;  /* page table entry */
 #define PROT_KERNEL_EXEC (PROT_KERNEL | _PG_EXEC)
 
 #ifndef __ASSEMBLY__
+extern pde_t initial_pgd[];
+
+#define PTE_INDEX(v)  (((unsigned long)(v) >> PG_SHIFT) & (NUM_PT_ENTRIES-1))
+#define PMDE_INDEX(x) (((unsigned long)(x) >> PMD_SHIFT) & (NUM_PMD_ENTRIES-1))
+#define PDE_INDEX(x)  (((unsigned long)(x) >> PGD_SHIFT)&(NUM_DIR_ENTRIES-1))
+
 /* helper functions */
 static inline pde_t pfn_pde(unsigned long pfn, unsigned long prot)
 {

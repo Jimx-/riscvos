@@ -32,6 +32,22 @@ SECTIONS{
          *(.bss)
         _ebss = .;
     }
+
+    . = ALIGN(4096);
+    .user_text : {
+        _user_text = .;
+         *(.user_text_entry)
+         *(.user_text)
+        _user_etext = .;
+    }
+    . = ALIGN(4096);
+    .user_data : {
+        __user_global_pointer$ = . + 0x800;
+        _data = .;
+         *(.data)
+        _edata = .;
+    }
+
     _KERN_SIZE = . - _VIR_BASE;
     _end = .;
     /DISCARD/ :
