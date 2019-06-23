@@ -35,6 +35,9 @@
 #define EXC_LOAD_PAGE_FAULT 13
 #define EXC_STORE_PAGE_FAULT 15
 
+/* interrupt enable flags */
+#define SIE_STIE 0x00000020UL /* Timer Interrupt Enable */
+
 #define csr_read(csr)                                                    \
     ({                                                                   \
         register unsigned long __v;                                      \
@@ -46,6 +49,18 @@
     ({                                                                      \
         unsigned long __v = (unsigned long)(val);                           \
         __asm__ __volatile__("csrw " #csr ", %0" : : "rK"(__v) : "memory"); \
+    })
+
+#define csr_set(csr, val)                                                   \
+    ({                                                                      \
+        unsigned long __v = (unsigned long)(val);                           \
+        __asm__ __volatile__("csrs " #csr ", %0" : : "rK"(__v) : "memory"); \
+    })
+
+#define csr_clear(csr, val)                                                 \
+    ({                                                                      \
+        unsigned long __v = (unsigned long)(val);                           \
+        __asm__ __volatile__("csrc " #csr ", %0" : : "rK"(__v) : "memory"); \
     })
 
 #endif

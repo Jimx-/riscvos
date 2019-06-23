@@ -31,6 +31,8 @@ void switch_to_user()
     p->regs.kernel_sp = (reg_t)&KStackTop;
     switch_address_space(p);
 
+    restart_local_timer();
+    p->last_cycles = read_cycles();
     restore_user_context(p);
 }
 

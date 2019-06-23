@@ -84,11 +84,20 @@ trap_entry:
     /* load kernel global pointer */
     la gp, __global_pointer$
 .option pop
-    
+
+    /* stop the context of current proc */
+    mv s0, a0
+    mv a0, tp
+    call stop_context
+    mv a0, s0
+
     /* check whether cause is interrupt or exception */
     bge s3, zero, do_exception /* s3 was set to scause in save_context */
 
 do_irq:
+    mv a0, tp
+    call handle_irq
+
     tail switch_to_user
 
 do_exception:
@@ -109,7 +118,7 @@ do_exception:
     jalr t0
 
     tail switch_to_user
-    
+
 1:
     call do_trap_unknown
     tail switch_to_user
@@ -121,19 +130,18 @@ do_syscall:
     addi s1, s1, 0x4
     sd s1, SEPCREG(tp)
 
-    /* a1 is the call_nr passed by user */
-	li t0, NR_SYSCALLS
-	la s0, sys_nop
-	/* syscall number held in a1 */
-	bgeu a0, t0, 1f
-	la s0, syscall_table
-	slli t0, a0, 3
-	add s0, s0, t0
-	ld s0, 0(s0)
+    li t0, NR_SYSCALLS
+    la s0, sys_nop
+    /* syscall number held in a0 */
+    bgeu a0, t0, 1f
+    la s0, syscall_table
+    slli t0, a0, 3
+    add s0, s0, t0
+    ld s0, 0(s0)
 1:
     /* replace syscall number with pointer to current proc */
     mv a0, tp
-	jalr s0
+    jalr s0
 
     /* save return value */
     sd a0, A0REG(tp)
@@ -146,9 +154,9 @@ trap_entry_kernel:
 
 restore_user_context:
     mv tp, a0
-	ld s0, SSTATUSREG(tp)
-	andi s0, s0, SR_SPP
-	bnez s0, restore_all
+    ld s0, SSTATUSREG(tp)
+    andi s0, s0, SR_SPP
+    bnez s0, restore_all
 
     /* save tp in sscratch only if we are returning to userspace */
     csrw sscratch, tp
@@ -159,38 +167,38 @@ restore_all:
     csrw sstatus, a0
     csrw sepc, a1
 
-	ld x1,  RAREG(tp)
-	ld x2,  SPREG(tp)
-	ld x3,  GPREG(tp)
-	ld x5,  T0REG(tp)
-	ld x6,  T1REG(tp)
-	ld x7,  T2REG(tp)
-	ld x8,  S0REG(tp)
-	ld x9,  S1REG(tp)
-	ld x10, A0REG(tp)
-	ld x11, A1REG(tp)
-	ld x12, A2REG(tp)
-	ld x13, A3REG(tp)
-	ld x14, A4REG(tp)
-	ld x15, A5REG(tp)
-	ld x16, A6REG(tp)
-	ld x17, A7REG(tp)
-	ld x18, S2REG(tp)
-	ld x19, S3REG(tp)
-	ld x20, S4REG(tp)
-	ld x21, S5REG(tp)
-	ld x22, S6REG(tp)
-	ld x23, S7REG(tp)
-	ld x24, S8REG(tp)
-	ld x25, S9REG(tp)
-	ld x26, S10REG(tp)
-	ld x27, S11REG(tp)
-	ld x28, T3REG(tp)
-	ld x29, T4REG(tp)
-	ld x30, T5REG(tp)
-	ld x31, T6REG(tp)
+    ld x1,  RAREG(tp)
+    ld x2,  SPREG(tp)
+    ld x3,  GPREG(tp)
+    ld x5,  T0REG(tp)
+    ld x6,  T1REG(tp)
+    ld x7,  T2REG(tp)
+    ld x8,  S0REG(tp)
+    ld x9,  S1REG(tp)
+    ld x10, A0REG(tp)
+    ld x11, A1REG(tp)
+    ld x12, A2REG(tp)
+    ld x13, A3REG(tp)
+    ld x14, A4REG(tp)
+    ld x15, A5REG(tp)
+    ld x16, A6REG(tp)
+    ld x17, A7REG(tp)
+    ld x18, S2REG(tp)
+    ld x19, S3REG(tp)
+    ld x20, S4REG(tp)
+    ld x21, S5REG(tp)
+    ld x22, S6REG(tp)
+    ld x23, S7REG(tp)
+    ld x24, S8REG(tp)
+    ld x25, S9REG(tp)
+    ld x26, S10REG(tp)
+    ld x27, S11REG(tp)
+    ld x28, T3REG(tp)
+    ld x29, T4REG(tp)
+    ld x30, T5REG(tp)
+    ld x31, T6REG(tp)
 
-	ld x4,  TPREG(tp)
+    ld x4,  TPREG(tp)
 
     sret
 
