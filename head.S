@@ -2,7 +2,7 @@
     #include "csr.h"
     #include "vm.h"
 
-    .section .head
+    .section ".head","ax"
 
     .globl _start/* entry point */
     .globl KStackTop /* kernel stack */
@@ -57,9 +57,8 @@ enable_paging:
     or a2, a2, a1
 
     sfence.vma
-    csrw sptbr, a2
-
-.align 4
+    csrw satp, a2
+.align 2
 1:
     /* reload global pointer */
 .option push
