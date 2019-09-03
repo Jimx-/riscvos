@@ -10,6 +10,7 @@
 void disp_char(const char c);
 void direct_put_str(const char* str);
 int printk(const char* fmt, ...);
+void panic(const char* fmt, ...);
 
 /* memory.c */
 void init_memory(void* dtb);
@@ -35,5 +36,10 @@ void switch_address_space(struct proc* p);
 uint64_t read_cycles();
 void restart_local_timer();
 void timer_interrupt();
+
+/* alloc.c */
+void mem_init(unsigned long mem_start, unsigned long free_mem_size);
+unsigned long alloc_pages(size_t nr_pages);
+int free_mem(unsigned long base, unsigned long len);
 
 #endif

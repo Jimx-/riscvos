@@ -4,7 +4,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 RISCVPK=$DIR/riscv-pk
 
-export PATH=$PATH:$DIR/toolchain/bin
+export PATH=$RISCV/bin:$PATH
 
 if [ ! -d "$RISCVPK/build" ]; then
     mkdir $RISCVPK/build

@@ -28,3 +28,19 @@ int printk(const char* fmt, ...)
 
     return i;
 }
+
+void panic(const char* fmt, ...)
+{
+    int i;
+    char buf[256];
+    va_list arg;
+
+    va_start(arg, fmt);
+    vsprintf(buf, fmt, arg);
+    va_end(arg);
+
+    printk("Kernel panic: %s\n");
+
+    while (1)
+        ;
+}

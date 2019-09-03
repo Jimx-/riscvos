@@ -83,37 +83,24 @@ static int fdt_scan_memory(void* blob, unsigned long offset, const char* name,
     unsigned long memory_size = 0;
     printk("Physical RAM map:\n");
     int i;
+    int first = 1;
     for (i = 0; i < memmap_count; i++) {
         struct memmap_entry* entry = &memmaps[i];
         memory_size += entry->size;
+
+        if (first) {
+            mem_init(entry->base, entry->size);
+            first = 0;
+        } else {
+            free_mem(entry->base, entry->size);
+        }
+
         printk("  mem[0x%016lx - 0x%016lx] usable\n", entry->base,
                entry->base + entry->size);
     }
     printk("Memory size: %dk\n", memory_size / 1024);
 
     return 0;
-}
-
-void* alloc_page(unsigned long* phys_addr)
-{
-    int i;
-
-    for (i = memmap_count - 1; i >= 0; i--) {
-        struct memmap_entry* entry = &memmaps[i];
-
-        if (!(entry->base % PG_SIZE) && (entry->size >= PG_SIZE)) {
-            entry->base += PG_SIZE;
-            entry->size -= PG_SIZE;
-
-            unsigned long pa = entry->base - PG_SIZE;
-            if (phys_addr) {
-                *phys_addr = pa;
-            }
-            return __va(pa);
-        }
-    }
-
-    return NULL;
 }
 
 void init_memory(void* dtb)

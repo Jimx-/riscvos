@@ -39,8 +39,8 @@ void setup_paging()
 
 static pte_t* pg_alloc_pt()
 {
-    unsigned long phys_addr;
-    pte_t* pt = (pte_t*)alloc_page(&phys_addr);
+    unsigned long phys_addr = alloc_pages(1);
+    pte_t* pt = (pte_t*)__va(phys_addr);
 
     memset(pt, 0, sizeof(pte_t) * NUM_PT_ENTRIES);
     return pt;
@@ -48,8 +48,8 @@ static pte_t* pg_alloc_pt()
 
 static pmde_t* pg_alloc_pmd()
 {
-    unsigned long phys_addr;
-    pmde_t* pmd = (pmde_t*)alloc_page(&phys_addr);
+    unsigned long phys_addr = alloc_pages(1);
+    pmde_t* pmd = (pmde_t*)__va(phys_addr);
 
     memset(pmd, 0, sizeof(pmde_t) * NUM_PMD_ENTRIES);
     return pmd;
@@ -100,7 +100,7 @@ void vm_map(struct proc* p, unsigned long phys_addr, void* vir_addr,
     while (vir_addr < vir_end) {
         unsigned long ph = phys_addr;
         if (ph == 0) {
-            alloc_page(&ph);
+            ph = alloc_pages(1);
         }
 
         pde_t* pde = pgd_offset(pgd, (unsigned long)vir_addr);
