@@ -42,7 +42,6 @@ SECTIONS{
     }
     . = ALIGN(4096);
     .user_data : {
-        __user_global_pointer$ = . + 0x800;
         _user_data = .;
          *(.user_data)
         _user_edata = .;

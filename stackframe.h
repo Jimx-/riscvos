@@ -3,7 +3,7 @@
 
 typedef unsigned long reg_t;
 
-struct stackframe {
+struct reg_context {
     /* save user registers in the frame upon context switch */
     reg_t sepc;
     reg_t ra;
@@ -49,7 +49,7 @@ struct stackframe {
     unsigned int cpu;
 };
 
-struct segframe {
+struct vm_context {
     reg_t ptbr_phys;
     reg_t* ptbr_vir;
 };

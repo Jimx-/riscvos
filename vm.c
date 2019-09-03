@@ -93,7 +93,7 @@ static inline int pte_present(pte_t pte) { return pte & _PG_PRESENT; }
 void vm_map(struct proc* p, unsigned long phys_addr, void* vir_addr,
             void* vir_end)
 {
-    pde_t* pgd = (pde_t*)p->segs.ptbr_vir;
+    pde_t* pgd = (pde_t*)p->vm.ptbr_vir;
 
     if (phys_addr % PG_SIZE) phys_addr = roundup(phys_addr, PG_SIZE);
 
@@ -123,4 +123,4 @@ void vm_map(struct proc* p, unsigned long phys_addr, void* vir_addr,
     }
 }
 
-void switch_address_space(struct proc* p) { write_ptbr(p->segs.ptbr_phys); }
+void switch_address_space(struct proc* p) { write_ptbr(p->vm.ptbr_phys); }

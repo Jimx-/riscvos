@@ -14,7 +14,7 @@ SRCS		= head.S trap.S main.c fdt.c proc.c sched.c vm.c global.c direct_tty.c mem
 OBJS		= $(patsubst %.c, $(BUILD_PATH)/%.o, $(patsubst %.S, $(BUILD_PATH)/%.o, $(patsubst %.asm, $(BUILD_PATH)/%.o, $(SRCS))))
 DEPS		= $(OBJS:.o=.d)
 
-PATH := $(SRC_PATH)/toolchain/bin:$(PATH)
+PATH := $(RISCV)/bin:$(PATH)
 
 KERNEL	= $(BUILD_PATH)/kernel
 

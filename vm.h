@@ -8,6 +8,9 @@
 #define KERNEL_VMA \
     0xffffffe000000000UL /* virtual address where the kernel is loaded */
 
+#define USER_STACK_TOP 0x2000000000
+#define USER_STACK_SIZE 0x1000
+
 #ifndef __ASSEMBLY__
 
 typedef unsigned long pde_t;  /* page directory entry */
@@ -61,9 +64,10 @@ typedef unsigned long pte_t;  /* page table entry */
 #ifndef __ASSEMBLY__
 extern pde_t initial_pgd[];
 
-#define PTE_INDEX(v)  (((unsigned long)(v) >> PG_SHIFT) & (NUM_PT_ENTRIES-1))
-#define PMDE_INDEX(x) (((unsigned long)(x) >> PMD_SHIFT) & (NUM_PMD_ENTRIES-1))
-#define PDE_INDEX(x)  (((unsigned long)(x) >> PGD_SHIFT)&(NUM_DIR_ENTRIES-1))
+#define PTE_INDEX(v) (((unsigned long)(v) >> PG_SHIFT) & (NUM_PT_ENTRIES - 1))
+#define PMDE_INDEX(x) \
+    (((unsigned long)(x) >> PMD_SHIFT) & (NUM_PMD_ENTRIES - 1))
+#define PDE_INDEX(x) (((unsigned long)(x) >> PGD_SHIFT) & (NUM_DIR_ENTRIES - 1))
 
 /* helper functions */
 static inline pde_t pfn_pde(unsigned long pfn, unsigned long prot)
@@ -81,28 +85,28 @@ static inline pte_t pfn_pte(unsigned long pfn, unsigned long prot)
     return (pfn << PG_PFN_SHIFT) | prot;
 }
 
-#define __pa(x) ((void*) ((unsigned long)(x) - va_pa_offset))
-#define __va(x) ((void*) ((unsigned long)(x) + va_pa_offset))
+#define __pa(x) ((void*)((unsigned long)(x)-va_pa_offset))
+#define __va(x) ((void*)((unsigned long)(x) + va_pa_offset))
 
 static inline void enable_user_access()
 {
-    __asm__ __volatile__ ("csrs sstatus, %0" : : "r" (SR_SUM) : "memory");
+    __asm__ __volatile__("csrs sstatus, %0" : : "r"(SR_SUM) : "memory");
 }
 
 static inline void disable_user_access()
 {
-    __asm__ __volatile__ ("csrc sstatus, %0" : : "r" (SR_SUM) : "memory");
+    __asm__ __volatile__("csrc sstatus, %0" : : "r"(SR_SUM) : "memory");
 }
 
 static inline void flush_tlb()
 {
-    __asm__ __volatile__ ("sfence.vma" : : : "memory");
+    __asm__ __volatile__("sfence.vma" : : : "memory");
 }
 
 static inline unsigned long read_ptbr()
 {
     unsigned long ptbr = csr_read(sptbr);
-    return (unsigned long) ((ptbr & SATP_PPN) << PG_SHIFT);
+    return (unsigned long)((ptbr & SATP_PPN) << PG_SHIFT);
 }
 
 static inline void write_ptbr(unsigned long ptbr)

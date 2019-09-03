@@ -9,8 +9,8 @@
 #define PROC_NAME_MAX 16
 
 struct proc {
-    struct stackframe regs; /* must be at the beginning of proc struct */
-    struct segframe segs;
+    struct reg_context regs; /* must be at the beginning of proc struct */
+    struct vm_context vm;
 
     int counter;          /* remaining ticks */
     int quantum;          /* time slice */
