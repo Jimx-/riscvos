@@ -107,6 +107,8 @@ void init_memory(void* dtb)
 {
     of_scan_fdt(fdt_scan_root, NULL, dtb);
     of_scan_fdt(fdt_scan_memory, NULL, dtb);
+
+    slabs_init();
 }
 
 void copy_from_user(void* dst, const void* src, size_t len)
