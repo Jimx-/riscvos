@@ -12,9 +12,8 @@ struct proc {
     struct reg_context regs; /* must be at the beginning of proc struct */
     struct vm_context vm;
 
-    int counter;          /* remaining ticks */
-    int quantum;          /* time slice */
-    uint64_t last_cycles; /* cycles at the last context switch */
+    unsigned long counter_ns; /* remaining ticks */
+    int quantum_ms;           /* time slice */
 
     /* process state */
 #define PST_NONE 0

@@ -1,7 +1,7 @@
 AS	= riscv64-unknown-elf-as
 CC	= riscv64-unknown-elf-gcc
 LD	= riscv64-unknown-elf-ld
-CFLAGS = -fno-builtin -fno-stack-protector -fpack-struct -Wall -mcmodel=medany -mabi=lp64 -march=rv64imac -O2 -Ilibfdt
+CFLAGS = -fno-builtin -fno-stack-protector -Wall -mcmodel=medany -mabi=lp64 -march=rv64imac -g -Ilibfdt
 LDFLAGS = -melf64lriscv -T riscvos.lds -Map System.map
 
 include libfdt/Makefile.libfdt

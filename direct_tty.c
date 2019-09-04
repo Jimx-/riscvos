@@ -31,7 +31,6 @@ int printk(const char* fmt, ...)
 
 void panic(const char* fmt, ...)
 {
-    int i;
     char buf[256];
     va_list arg;
 
@@ -39,7 +38,7 @@ void panic(const char* fmt, ...)
     vsprintf(buf, fmt, arg);
     va_end(arg);
 
-    printk("Kernel panic: %s\n");
+    printk("Kernel panic: %s\n", buf);
 
     while (1)
         ;

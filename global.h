@@ -10,6 +10,7 @@
 #include "proc.h"
 
 EXTERN unsigned long va_pa_offset;
+EXTERN unsigned long phys_mem_end;
 
 EXTERN struct proc proc_table[PROC_MAX];
 

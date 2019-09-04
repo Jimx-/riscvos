@@ -20,6 +20,7 @@ void copy_from_user(void* dst, const void* src, size_t len);
 /* vm.c */
 void vm_map(struct proc* p, unsigned long phys_addr, void* vir_addr,
             void* vir_end);
+void vm_mapkernel(struct proc* p);
 
 /* proc.c */
 void init_proc();
@@ -33,9 +34,11 @@ void restore_user_context(struct proc* p);
 void switch_address_space(struct proc* p);
 
 /* clock.c */
+void init_timer(void* dtb);
 uint64_t read_cycles();
 void restart_local_timer();
 void timer_interrupt();
+void stop_context(struct proc* p);
 
 /* alloc.c */
 void mem_init(unsigned long mem_start, unsigned long free_mem_size);

@@ -1,16 +1,22 @@
 #include "const.h"
 
-const char str[] __attribute__((__section__(".user_data"))) = "Hello world!\n";
-
-void Init() __attribute__((__section__(".user_text_entry")));
+void TestA() __attribute__((__section__(".user_text")));
+void TestB() __attribute__((__section__(".user_text")));
 
 void __syscall(int call_nr, ...);
 
-/* the INIT process */
-void Init()
+void TestA()
 {
-    __syscall(SYS_WRITE_CONSOLE, (unsigned long)str, 13);
+    const char str[] = "A";
+    while (1) {
+        __syscall(SYS_WRITE_CONSOLE, (unsigned long)str, 1);
+    }
+}
 
-    while (1)
-        ;
+void TestB()
+{
+    const char str[] = "B";
+    while (1) {
+        __syscall(SYS_WRITE_CONSOLE, (unsigned long)str, 1);
+    }
 }

@@ -6,7 +6,12 @@
 
 #define INIT_ENTRY_POINT PG_SIZE
 
-static void spawn_init();
+void TestA();
+void TestB();
+
+static void spawn_procs();
+
+static struct proc idle_proc;
 
 void init_proc()
 {
@@ -17,7 +22,7 @@ void init_proc()
         p->state = PST_FREESLOT;
     }
 
-    spawn_init();
+    spawn_procs();
 }
 
 void switch_to_user()
@@ -31,22 +36,29 @@ void switch_to_user()
     p->regs.kernel_sp = (reg_t)&KStackTop;
     switch_address_space(p);
 
+    stop_context(&idle_proc);
+
     restart_local_timer();
-    p->last_cycles = read_cycles();
     restore_user_context(p);
 }
 
-static void spawn_init()
+static void spawn_procs()
 {
-    /* setup everything for the INIT process */
+    /* setup the two processes */
     extern char _user_text, _user_etext, _user_data, _user_edata;
-    struct proc* p = &proc_table[0];
+    struct proc *pa = &proc_table[0], *pb = &proc_table[1];
 
-    p->state &= ~PST_FREESLOT;
+    pa->state &= ~PST_FREESLOT;
+    pb->state &= ~PST_FREESLOT;
 
     /* reuse the initial page table */
-    p->vm.ptbr_phys = (reg_t)__pa(initial_pgd);
-    p->vm.ptbr_vir = (reg_t*)initial_pgd;
+    pa->vm.ptbr_phys = (reg_t)alloc_pages(1);
+    pa->vm.ptbr_vir = (reg_t*)__va(pa->vm.ptbr_phys);
+    vm_mapkernel(pa);
+
+    pb->vm.ptbr_phys = (reg_t)alloc_pages(1);
+    pb->vm.ptbr_vir = (reg_t*)__va(pb->vm.ptbr_phys);
+    vm_mapkernel(pb);
 
     /* map user text section */
     unsigned long user_text_start = (unsigned long)__pa(&_user_text);
@@ -58,14 +70,25 @@ static void spawn_init()
     unsigned long user_data_size =
         roundup(user_data_end - user_data_start, PG_SIZE);
 
-    p->regs.sepc = INIT_ENTRY_POINT;
-    p->regs.sp = USER_STACK_TOP;
+    pa->regs.sepc = INIT_ENTRY_POINT + ((char*)&TestA - &_user_text);
+    pa->regs.sp = USER_STACK_TOP;
+    pb->regs.sepc = INIT_ENTRY_POINT + ((char*)&TestB - &_user_text);
+    pb->regs.sp = USER_STACK_TOP;
 
-    vm_map(p, user_text_start, (void*)INIT_ENTRY_POINT,
+    vm_map(pa, user_text_start, (void*)INIT_ENTRY_POINT,
            (void*)(INIT_ENTRY_POINT + user_text_size));
-    vm_map(p, user_data_start, (void*)(INIT_ENTRY_POINT + user_text_size),
+    vm_map(pa, user_data_start, (void*)(INIT_ENTRY_POINT + user_text_size),
            (void*)(INIT_ENTRY_POINT + user_text_size + user_data_size));
-    /* allocate stack */
-    vm_map(p, 0, (void*)(USER_STACK_TOP - USER_STACK_SIZE),
+    vm_map(pa, 0, (void*)(USER_STACK_TOP - USER_STACK_SIZE),
            (void*)USER_STACK_TOP);
+
+    vm_map(pb, user_text_start, (void*)INIT_ENTRY_POINT,
+           (void*)(INIT_ENTRY_POINT + user_text_size));
+    vm_map(pb, user_data_start, (void*)(INIT_ENTRY_POINT + user_text_size),
+           (void*)(INIT_ENTRY_POINT + user_text_size + user_data_size));
+    vm_map(pb, 0, (void*)(USER_STACK_TOP - USER_STACK_SIZE),
+           (void*)USER_STACK_TOP);
+
+    pa->quantum_ms = 10;
+    pb->quantum_ms = 20;
 }

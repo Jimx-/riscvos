@@ -123,4 +123,23 @@ void vm_map(struct proc* p, unsigned long phys_addr, void* vir_addr,
     }
 }
 
+void vm_mapkernel(struct proc* p)
+{
+    pde_t* pgd = (pde_t*)p->vm.ptbr_vir;
+
+    extern char _start;
+    unsigned long pa_start = __pa(&_start);
+    size_t num_pmds = (phys_mem_end - pa_start) >> PGD_SHIFT;
+
+    if (num_pmds == 0) {
+        num_pmds = 1;
+    }
+
+    int i;
+    for (i = 0; i < num_pmds; i++) {
+        pgd[(KERNEL_VMA >> PGD_SHIFT) % NUM_DIR_ENTRIES + i] =
+            initial_pgd[(KERNEL_VMA >> PGD_SHIFT) % NUM_DIR_ENTRIES + i];
+    }
+}
+
 void switch_address_space(struct proc* p) { write_ptbr(p->vm.ptbr_phys); }

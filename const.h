@@ -15,4 +15,6 @@
 
 #endif
 
+#define SYSTEM_HZ 100
+
 #endif

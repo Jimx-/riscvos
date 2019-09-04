@@ -55,16 +55,16 @@
     li t0, SR_SUM
     csrrc s0, sstatus, t0
 
-    csrr s1, sepc
-    csrr s2, sbadaddr
-    csrr s3, scause
-    csrr s4, sscratch
+    csrr s8, sepc
+    csrr s9, sbadaddr
+    csrr s10, scause
+    csrr s11, sscratch
 
     sd s0, SSTATUSREG(tp)
-    sd s1, SEPCREG(tp)
-    sd s2, SBADADDRREG(tp)
-    sd s3, SCAUSEREG(tp)
-    sd s4, TPREG(tp)
+    sd s8, SEPCREG(tp)
+    sd s9, SBADADDRREG(tp)
+    sd s10, SCAUSEREG(tp)
+    sd s11, TPREG(tp)
 .endm
 
 .align 4
@@ -87,12 +87,16 @@ trap_entry:
 
     /* stop the context of current proc */
     mv s0, a0
+    mv s1, a1
+    mv s2, a2
     mv a0, tp
     call stop_context
     mv a0, s0
+    mv a1, s1
+    mv a2, s2
 
     /* check whether cause is interrupt or exception */
-    bge s3, zero, do_exception /* s3 was set to scause in save_context */
+    bge s10, zero, do_exception /* s10 was set to scause in save_context */
 
 do_irq:
     mv a0, tp
@@ -102,13 +106,13 @@ do_irq:
 
 do_exception:
     li t0, EXC_SYSCALL
-    beq s3, t0, do_syscall
+    beq s10, t0, do_syscall
 
     ld a0, SSTATUSREG(tp)
     andi a0, a0, SR_SPP     /* in_kernel */
     mv a1, tp               /* proc_ptr */
 
-    slli t0, s3, 3
+    slli t0, s10, 3
     la t1, exc_vector_table
     la t2, exc_vector_table_end
     add t0, t1, t0
@@ -127,8 +131,8 @@ do_syscall:
     sd a0, P_ORIGA0(tp)
 
     /* relocate the return pc(skip the original scall instruction) */
-    addi s1, s1, 0x4
-    sd s1, SEPCREG(tp)
+    addi s8, s8, 0x4
+    sd s8, SEPCREG(tp)
 
     li t0, NR_SYSCALLS
     la s0, sys_nop

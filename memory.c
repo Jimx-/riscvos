@@ -81,6 +81,7 @@ static int fdt_scan_memory(void* blob, unsigned long offset, const char* name,
                roundup((unsigned long)__pa(&_end), PG_SIZE));
 
     unsigned long memory_size = 0;
+    phys_mem_end = 0;
     printk("Physical RAM map:\n");
     int i;
     int first = 1;
@@ -93,6 +94,10 @@ static int fdt_scan_memory(void* blob, unsigned long offset, const char* name,
             first = 0;
         } else {
             free_mem(entry->base, entry->size);
+        }
+
+        if (entry->base + entry->size > phys_mem_end) {
+            phys_mem_end = entry->base + entry->size;
         }
 
         printk("  mem[0x%016lx - 0x%016lx] usable\n", entry->base,
