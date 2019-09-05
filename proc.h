@@ -1,7 +1,9 @@
 #ifndef _PROC_H_
 #define _PROC_H_
 
+#include "list.h"
 #include "stackframe.h"
+#include "vm.h"
 
 #include <stdint.h>
 

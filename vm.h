@@ -13,9 +13,28 @@
 
 #ifndef __ASSEMBLY__
 
+#include "list.h"
+#include "stackframe.h"
+#include <stddef.h>
+
 typedef unsigned long pde_t;  /* page directory entry */
 typedef unsigned long pmde_t; /* page middle directory entry */
 typedef unsigned long pte_t;  /* page table entry */
+
+struct vm_context {
+    reg_t ptbr_phys;
+    reg_t* ptbr_vir;
+
+    struct list_head regions;
+};
+
+struct vm_region {
+    struct list_head list;
+
+    void* vir_base;
+    unsigned long phys_base;
+    size_t size;
+};
 
 #endif
 

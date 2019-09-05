@@ -49,9 +49,4 @@ struct reg_context {
     unsigned int cpu;
 };
 
-struct vm_context {
-    reg_t ptbr_phys;
-    reg_t* ptbr_vir;
-};
-
 #endif

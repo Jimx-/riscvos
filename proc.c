@@ -6,10 +6,9 @@
 
 #define INIT_ENTRY_POINT PG_SIZE
 
-void TestA();
-void TestB();
+void Init();
 
-static void spawn_procs();
+static void spawn_init();
 
 static struct proc idle_proc;
 
@@ -22,7 +21,7 @@ void init_proc()
         p->state = PST_FREESLOT;
     }
 
-    spawn_procs();
+    spawn_init();
 }
 
 void switch_to_user()
@@ -42,23 +41,17 @@ void switch_to_user()
     restore_user_context(p);
 }
 
-static void spawn_procs()
+static void spawn_init()
 {
     /* setup the two processes */
     extern char _user_text, _user_etext, _user_data, _user_edata;
-    struct proc *pa = &proc_table[0], *pb = &proc_table[1];
+    struct proc* p = &proc_table[0];
 
-    pa->state &= ~PST_FREESLOT;
-    pb->state &= ~PST_FREESLOT;
+    p->state &= ~PST_FREESLOT;
 
-    /* reuse the initial page table */
-    pa->vm.ptbr_phys = (reg_t)alloc_pages(1);
-    pa->vm.ptbr_vir = (reg_t*)__va(pa->vm.ptbr_phys);
-    vm_mapkernel(pa);
-
-    pb->vm.ptbr_phys = (reg_t)alloc_pages(1);
-    pb->vm.ptbr_vir = (reg_t*)__va(pb->vm.ptbr_phys);
-    vm_mapkernel(pb);
+    p->vm.ptbr_phys = (reg_t)alloc_pages(1);
+    p->vm.ptbr_vir = (reg_t*)__va(p->vm.ptbr_phys);
+    vm_mapkernel(p);
 
     /* map user text section */
     unsigned long user_text_start = (unsigned long)__pa(&_user_text);
@@ -70,25 +63,16 @@ static void spawn_procs()
     unsigned long user_data_size =
         roundup(user_data_end - user_data_start, PG_SIZE);
 
-    pa->regs.sepc = INIT_ENTRY_POINT + ((char*)&TestA - &_user_text);
-    pa->regs.sp = USER_STACK_TOP;
-    pb->regs.sepc = INIT_ENTRY_POINT + ((char*)&TestB - &_user_text);
-    pb->regs.sp = USER_STACK_TOP;
+    p->regs.sepc = INIT_ENTRY_POINT + ((char*)&Init - &_user_text);
+    p->regs.sp = USER_STACK_TOP;
 
-    vm_map(pa, user_text_start, (void*)INIT_ENTRY_POINT,
+    INIT_LIST_HEAD(&p->vm.regions);
+    vm_map(p, user_text_start, (void*)INIT_ENTRY_POINT,
            (void*)(INIT_ENTRY_POINT + user_text_size));
-    vm_map(pa, user_data_start, (void*)(INIT_ENTRY_POINT + user_text_size),
+    vm_map(p, user_data_start, (void*)(INIT_ENTRY_POINT + user_text_size),
            (void*)(INIT_ENTRY_POINT + user_text_size + user_data_size));
-    vm_map(pa, 0, (void*)(USER_STACK_TOP - USER_STACK_SIZE),
+    vm_map(p, 0, (void*)(USER_STACK_TOP - USER_STACK_SIZE),
            (void*)USER_STACK_TOP);
 
-    vm_map(pb, user_text_start, (void*)INIT_ENTRY_POINT,
-           (void*)(INIT_ENTRY_POINT + user_text_size));
-    vm_map(pb, user_data_start, (void*)(INIT_ENTRY_POINT + user_text_size),
-           (void*)(INIT_ENTRY_POINT + user_text_size + user_data_size));
-    vm_map(pb, 0, (void*)(USER_STACK_TOP - USER_STACK_SIZE),
-           (void*)USER_STACK_TOP);
-
-    pa->quantum_ms = 10;
-    pb->quantum_ms = 20;
+    p->quantum_ms = 10;
 }

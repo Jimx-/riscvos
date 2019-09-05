@@ -78,7 +78,6 @@ void* slaballoc(size_t bytes)
 
         list_add(&sd->header.list, slab);
     }
-    printk("alloc sd: %p\n", sd);
 
     int i;
     int max_objs = DATABYTES / bytes;

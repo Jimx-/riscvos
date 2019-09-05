@@ -4,8 +4,9 @@
 #define KSTACK_SIZE 0x1000 /* kernel stack size 4kB */
 
 /* syscall numbers */
-#define NR_SYSCALLS 1
+#define NR_SYSCALLS 2
 #define SYS_WRITE_CONSOLE 0 /* write a string to console */
+#define SYS_FORK 1          /* fork */
 
 #ifndef __ASSEMBLY__
 

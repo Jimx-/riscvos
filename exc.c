@@ -60,7 +60,6 @@ void do_trap_ecall_m(int in_kernel, struct proc* p) { printk("ecall m\n"); }
 
 void do_page_fault(int in_kernel, struct proc* p)
 {
-    //   printk("page fault %d %x %lx %lx\n", in_kernel, p->regs.scause,
-    //   p->regs.sbadaddr, p->regs.sepc);
-    printk("page fault\n");
+    printk("page fault[in_kernel: %d, scause: %x, badaddr: %lx, sepc: %lx\n",
+           in_kernel, p->regs.scause, p->regs.sbadaddr, p->regs.sepc);
 }

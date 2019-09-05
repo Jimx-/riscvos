@@ -12,6 +12,8 @@
 EXTERN unsigned long va_pa_offset;
 EXTERN unsigned long phys_mem_end;
 
+EXTERN int dt_root_addr_cells, dt_root_size_cells;
+
 EXTERN struct proc proc_table[PROC_MAX];
 
 #endif

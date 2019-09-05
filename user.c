@@ -1,22 +1,37 @@
 #include "const.h"
 
-void TestA() __attribute__((__section__(".user_text")));
-void TestB() __attribute__((__section__(".user_text")));
+const char pstr[] __attribute__((__section__(".user_data"))) = "parent\n";
+const char cstr[] __attribute__((__section__(".user_data"))) = "child\n";
 
-void __syscall(int call_nr, ...);
+void Init() __attribute__((__section__(".user_text")));
 
-void TestA()
+long __syscall(int call_nr, ...);
+static void write_console(const char* str)
+    __attribute__((__section__(".user_text")));
+static long fork(void) __attribute__((__section__(".user_text")));
+
+void Init()
 {
-    const char str[] = "A";
+    int pid = fork();
+
+    if (pid > 0) {
+        write_console(pstr);
+    } else {
+        write_console(cstr);
+    }
+
     while (1) {
-        __syscall(SYS_WRITE_CONSOLE, (unsigned long)str, 1);
     }
 }
 
-void TestB()
+static void write_console(const char* str)
 {
-    const char str[] = "B";
-    while (1) {
-        __syscall(SYS_WRITE_CONSOLE, (unsigned long)str, 1);
-    }
+    int len = 0;
+    const char* p = str;
+    while (*p++)
+        len++;
+
+    __syscall(SYS_WRITE_CONSOLE, (unsigned long)str, len);
 }
+
+static long fork(void) { return __syscall(SYS_FORK); }

@@ -12,8 +12,6 @@ static struct memmap_entry {
 } memmaps[MEMMAP_MAX];
 static int memmap_count;
 
-static int dt_root_addr_cells, dt_root_size_cells;
-
 static void cut_memmap(unsigned long start, unsigned long end)
 {
     int i;

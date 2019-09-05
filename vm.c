@@ -94,15 +94,19 @@ void vm_map(struct proc* p, unsigned long phys_addr, void* vir_addr,
             void* vir_end)
 {
     pde_t* pgd = (pde_t*)p->vm.ptbr_vir;
+    size_t mapsize = roundup(vir_end - vir_addr, PG_SIZE);
 
+    if (phys_addr == 0) phys_addr = alloc_pages(mapsize >> PG_SHIFT);
     if (phys_addr % PG_SIZE) phys_addr = roundup(phys_addr, PG_SIZE);
 
-    while (vir_addr < vir_end) {
-        unsigned long ph = phys_addr;
-        if (ph == 0) {
-            ph = alloc_pages(1);
-        }
+    struct vm_region* vmr;
+    SLABALLOC(vmr);
+    vmr->phys_base = phys_addr;
+    vmr->vir_base = vir_addr;
+    vmr->size = mapsize;
+    list_add(&vmr->list, &p->vm.regions);
 
+    while (vir_addr < vir_end) {
         pde_t* pde = pgd_offset(pgd, (unsigned long)vir_addr);
         if (!pde_present(*pde)) {
             pmde_t* new_pmd = pg_alloc_pmd();
@@ -116,10 +120,10 @@ void vm_map(struct proc* p, unsigned long phys_addr, void* vir_addr,
         }
 
         pte_t* pte = pte_offset(pmde, (unsigned long)vir_addr);
-        *pte = pfn_pte(ph >> PG_SHIFT, PROT_EXEC_WRITE);
+        *pte = pfn_pte(phys_addr >> PG_SHIFT, PROT_EXEC_WRITE);
 
         vir_addr += PG_SIZE;
-        if (phys_addr != 0) phys_addr += PG_SIZE;
+        phys_addr += PG_SIZE;
     }
 }
 
@@ -129,11 +133,8 @@ void vm_mapkernel(struct proc* p)
 
     extern char _start;
     unsigned long pa_start = __pa(&_start);
-    size_t num_pmds = (phys_mem_end - pa_start) >> PGD_SHIFT;
-
-    if (num_pmds == 0) {
-        num_pmds = 1;
-    }
+    size_t num_pmds =
+        roundup(phys_mem_end - pa_start, (1ULL << PGD_SHIFT)) >> PGD_SHIFT;
 
     int i;
     for (i = 0; i < num_pmds; i++) {
