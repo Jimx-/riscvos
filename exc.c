@@ -8,6 +8,7 @@ void init_trap()
 {
     csr_write(stvec, (reg_t)&trap_entry);
     csr_write(sie, -1);
+    csr_clear(sie, SIE_SEIE);
 }
 
 void do_trap_unknown(int in_kernel, struct proc* p)

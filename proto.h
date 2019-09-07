@@ -21,6 +21,7 @@ void copy_from_user(void* dst, const void* src, size_t len);
 void vm_map(struct proc* p, unsigned long phys_addr, void* vir_addr,
             void* vir_end);
 void vm_mapkernel(struct proc* p);
+void* vm_mapio(unsigned long phys_addr, size_t size);
 
 /* proc.c */
 void init_proc();
@@ -58,5 +59,9 @@ void slabfree(void* mem, size_t bytes);
         slabfree(p, sizeof(*p)); \
         p = NULL;                \
     } while (0)
+
+/* blk.c */
+int init_blkdev();
+int blk_rdwt(int write, unsigned int block_num, size_t count, uint8_t* buf);
 
 #endif

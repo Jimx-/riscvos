@@ -37,6 +37,7 @@
 
 /* interrupt enable flags */
 #define SIE_STIE 0x00000020UL /* Timer Interrupt Enable */
+#define SIE_SEIE 0x00000200UL /* External Interrupt Enable */
 
 #define csr_read(csr)                                                    \
     ({                                                                   \

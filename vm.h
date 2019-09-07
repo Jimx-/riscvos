@@ -7,6 +7,7 @@
  * addressable, which is far beyond possible physical RAM size but */
 #define KERNEL_VMA \
     0xffffffe000000000UL /* virtual address where the kernel is loaded */
+#define IOMAP_BASE 0xfffffffffff00000UL
 
 #define USER_STACK_TOP 0x2000000000
 #define USER_STACK_SIZE 0x1000
@@ -116,6 +117,8 @@ static inline void disable_user_access()
 {
     __asm__ __volatile__("csrc sstatus, %0" : : "r"(SR_SUM) : "memory");
 }
+
+static inline void mb() { __asm__ __volatile__("sfence.vma" : : : "memory"); }
 
 static inline void flush_tlb()
 {

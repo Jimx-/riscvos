@@ -18,4 +18,6 @@
 
 #define SYSTEM_HZ 100
 
+#define BLOCK_SIZE 0x1000
+
 #endif
