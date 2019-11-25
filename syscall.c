@@ -21,8 +21,10 @@ static long sys_fork(struct proc* p)
 {
     int i;
     struct proc *pp = proc_table, *child;
+    struct reg_context *parent_context, *child_context;
     int pid;
 
+    printk("fork\n");
     /* find an empty slot in the proc table */
     for (i = 0; i < PROC_MAX; i++, pp++) {
         if (pp->state & PST_FREESLOT) {
@@ -40,6 +42,14 @@ static long sys_fork(struct proc* p)
     child->vm.ptbr_vir = (reg_t*)__va(child->vm.ptbr_phys);
     vm_mapkernel(child);
 
+    child->kernel_stack = __va(alloc_pages(1));
+    parent_context = (struct reg_context*)(p->kernel_stack + PG_SIZE -
+                                           sizeof(struct reg_context));
+    child_context = (struct reg_context*)(child->kernel_stack + PG_SIZE -
+                                          sizeof(struct reg_context));
+    child->regs.ra = (reg_t)&restore_user_context;
+    child->regs.sp = (reg_t)child_context;
+
     INIT_LIST_HEAD(&child->vm.regions);
     struct vm_region* vmr;
     list_for_each_entry(vmr, &p->vm.regions, list)
@@ -56,11 +66,9 @@ static long sys_fork(struct proc* p)
 
     child->quantum_ms = p->quantum_ms;
 
-    /* duplicate the register context */
-    memcpy(&child->regs, &p->regs, sizeof(p->regs));
-
     /* return 0 to child process */
-    child->regs.a0 = 0;
+    *child_context = *parent_context;
+    child_context->a0 = 0;
 
     return pid;
 }

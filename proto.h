@@ -31,7 +31,10 @@ void switch_to_user();
 /* exc.c */
 void init_trap();
 
-void restore_user_context(struct proc* p);
+/* trap.S */
+void switch_context(struct proc* prev, struct proc* next);
+void restore_user_context();
+
 void switch_address_space(struct proc* p);
 
 /* clock.c */

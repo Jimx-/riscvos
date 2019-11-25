@@ -12,7 +12,9 @@
 
 struct proc {
     struct reg_context regs; /* must be at the beginning of proc struct */
+    struct thread_info thread;
     struct vm_context vm;
+    uint8_t* kernel_stack;
 
     unsigned long counter_ns; /* remaining ticks */
     int quantum_ms;           /* time slice */

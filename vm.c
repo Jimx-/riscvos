@@ -134,6 +134,7 @@ void vm_map(struct proc* p, unsigned long phys_addr, void* vir_addr,
 
     struct vm_region* vmr;
     SLABALLOC(vmr);
+    INIT_LIST_HEAD(&vmr->list);
     vmr->phys_base = phys_addr;
     vmr->vir_base = vir_addr;
     vmr->size = mapsize;

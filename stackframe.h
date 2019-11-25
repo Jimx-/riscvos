@@ -8,7 +8,6 @@ struct reg_context {
     reg_t sepc;
     reg_t ra;
     reg_t sp;
-    reg_t kernel_sp;
     reg_t gp;
     reg_t tp;
     reg_t t0;
@@ -44,9 +43,11 @@ struct reg_context {
     reg_t scause;
 
     reg_t orig_a0;
+};
 
-    /* Current CPU */
-    unsigned int cpu;
+struct thread_info {
+    reg_t kernel_sp;
+    reg_t user_sp;
 };
 
 #endif
