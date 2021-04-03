@@ -9,9 +9,13 @@ include libfdt/Makefile.libfdt
 
 SRC_PATH	= .
 BUILD_PATH  = ./obj
-LIBSRCS		= lib/vsprintf.c lib/strlen.c lib/memcpy.c lib/memcmp.c lib/memchr.c lib/memmove.c lib/memset.c lib/strnlen.c lib/strrchr.c lib/strtoul.c lib/strchr.c lib/strcmp.c
+LIBSRCS		= lib/vsprintf.c lib/strlen.c lib/memcpy.c lib/memcmp.c lib/memchr.c lib/memmove.c \
+				lib/memset.c lib/strnlen.c lib/strrchr.c lib/strtoul.c lib/strchr.c lib/strcmp.c
 EXTSRCS		= $(patsubst %.c, libfdt/%.c, $(LIBFDT_SRCS))
-SRCS		= head.S trap.S main.c fdt.c proc.c sched.c vm.c global.c direct_tty.c memory.c exc.c syscall.c irq.c timer.c user.c gate.S alloc.c slab.c virtio.c blk.c $(LIBSRCS) $(EXTSRCS)
+SRCS		= head.S trap.S main.c fdt.c proc.c sched.c vm.c global.c direct_tty.c memory.c \
+				exc.c syscall.c irq.c timer.c user.c gate.S alloc.c slab.c virtio.c blk.c \
+				pci.c \
+				$(LIBSRCS) $(EXTSRCS)
 OBJS		= $(patsubst %.c, $(BUILD_PATH)/%.o, $(patsubst %.S, $(BUILD_PATH)/%.o, $(patsubst %.asm, $(BUILD_PATH)/%.o, $(SRCS))))
 
 DEPS		= $(OBJS:.o=.d)
@@ -34,8 +38,8 @@ image : all
 run :
 	@spike bbl
 
-runqemu :
-	@qemu-system-riscv64 -M virt -kernel bbl -drive id=disk0,file=HD,if=none,format=raw -device virtio-blk-device,drive=disk0 -monitor stdio -bios none
+qemu :
+	@qemu-system-riscv64 -M virt -kernel bbl -drive id=disk0,file=HD,if=none,format=raw -device virtio-blk-device,drive=disk0 -monitor stdio -bios none -device ivshmem-plain,memdev=hostmem -object memory-backend-file,size=1M,share,mem-path=/dev/shm/ivshmem,id=hostmem
 
 runqemudbg :
 	@qemu-system-riscv64 -M virt -kernel bbl -drive id=disk0,file=HD,if=none,format=raw -device virtio-blk-device,drive=disk0 -monitor stdio -bios none -s -S
@@ -44,7 +48,7 @@ clean :
 	rm $(KERNEL)
 
 realclean :
-	rm $(KERNEL) $(OBJS) $(USEROBJS)
+	rm $(KERNEL) $(OBJS)
 
 $(KERNEL) : $(OBJS)
 	$(LD) $(LDFLAGS) -o $(KERNEL) $(OBJS)

@@ -7,7 +7,7 @@
  * addressable, which is far beyond possible physical RAM size but */
 #define KERNEL_VMA \
     0xffffffe000000000UL /* virtual address where the kernel is loaded */
-#define IOMAP_BASE 0xfffffffffff00000UL
+#define IOMAP_BASE 0xffffffff00000000UL
 
 #define USER_STACK_TOP 0x2000000000
 #define USER_STACK_SIZE 0x1000

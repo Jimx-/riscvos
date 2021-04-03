@@ -186,9 +186,10 @@ void* vm_mapio(unsigned long phys_addr, size_t size)
     map->vir_base = iomap_base;
     map->phys_addr = phys_base;
     map->size = size;
+    printk("iomap: vir 0x%lx-0x%lx -> phys 0x%lx\r\n", map->vir_base,
+           map->vir_base + map->size, map->phys_addr);
 
-    vm_mappage(initial_pgd, phys_base, vir_addr, vir_addr + size,
-               PROT_KERNEL_EXEC);
+    vm_mappage(initial_pgd, phys_base, vir_addr, vir_addr + size, PROT_KERNEL);
     flush_tlb();
 
     iomap_base += size;
