@@ -35,6 +35,14 @@
 #define EXC_LOAD_PAGE_FAULT 13
 #define EXC_STORE_PAGE_FAULT 15
 
+/* Interrupt causes (minus the high bit) */
+#define IRQ_S_SOFT 1
+#define IRQ_M_SOFT 3
+#define IRQ_S_TIMER 5
+#define IRQ_M_TIMER 7
+#define IRQ_S_EXT 9
+#define IRQ_M_EXT 11
+
 /* interrupt enable flags */
 #define SIE_STIE 0x00000020UL /* Timer Interrupt Enable */
 #define SIE_SEIE 0x00000200UL /* External Interrupt Enable */

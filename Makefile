@@ -3,6 +3,7 @@ CC	= riscv64-unknown-elf-gcc
 LD	= riscv64-unknown-elf-ld
 CFLAGS = -fno-builtin -fno-stack-protector -Wall -mcmodel=medany -mabi=lp64 -march=rv64imac -g -Ilibfdt
 LDFLAGS = -melf64lriscv -T riscvos.lds -Map System.map
+LDFLAGS_USER = -melf64lriscv -nostdlib
 
 include libfdt/Makefile.libfdt
 
@@ -12,6 +13,7 @@ LIBSRCS		= lib/vsprintf.c lib/strlen.c lib/memcpy.c lib/memcmp.c lib/memchr.c li
 EXTSRCS		= $(patsubst %.c, libfdt/%.c, $(LIBFDT_SRCS))
 SRCS		= head.S trap.S main.c fdt.c proc.c sched.c vm.c global.c direct_tty.c memory.c exc.c syscall.c irq.c timer.c user.c gate.S alloc.c slab.c virtio.c blk.c $(LIBSRCS) $(EXTSRCS)
 OBJS		= $(patsubst %.c, $(BUILD_PATH)/%.o, $(patsubst %.S, $(BUILD_PATH)/%.o, $(patsubst %.asm, $(BUILD_PATH)/%.o, $(SRCS))))
+
 DEPS		= $(OBJS:.o=.d)
 
 PATH := $(RISCV)/bin:$(PATH)
@@ -32,11 +34,17 @@ image : all
 run :
 	@spike bbl
 
+runqemu :
+	@qemu-system-riscv64 -M virt -kernel bbl -drive id=disk0,file=HD,if=none,format=raw -device virtio-blk-device,drive=disk0 -monitor stdio -bios none
+
+runqemudbg :
+	@qemu-system-riscv64 -M virt -kernel bbl -drive id=disk0,file=HD,if=none,format=raw -device virtio-blk-device,drive=disk0 -monitor stdio -bios none -s -S
+
 clean :
 	rm $(KERNEL)
 
 realclean :
-	rm $(KERNEL) $(OBJS)
+	rm $(KERNEL) $(OBJS) $(USEROBJS)
 
 $(KERNEL) : $(OBJS)
 	$(LD) $(LDFLAGS) -o $(KERNEL) $(OBJS)

@@ -1,4 +1,5 @@
 #include "csr.h"
+#include "global.h"
 #include "proc.h"
 #include "proto.h"
 
@@ -59,8 +60,9 @@ void do_trap_ecall_s(int in_kernel, struct proc* p) { printk("ecall s\n"); }
 
 void do_trap_ecall_m(int in_kernel, struct proc* p) { printk("ecall m\n"); }
 
-void do_page_fault(int in_kernel, struct proc* p)
+void do_page_fault(int in_kernel, reg_t sbadaddr, reg_t sepc)
 {
-    printk("page fault[in_kernel: %d, scause: %x, badaddr: %lx, sepc: %lx\n",
-           in_kernel, p->regs.scause, p->regs.sbadaddr, p->regs.sepc);
+    printk(
+        "page fault[in_kernel: %d, badaddr: %lx, sepc: %lx, ptbr: %lx/%lx]\r\n",
+        in_kernel, sbadaddr, sepc, read_ptbr(), __pa(initial_pgd));
 }

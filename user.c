@@ -1,7 +1,7 @@
 #include "const.h"
 
-const char pstr[] __attribute__((__section__(".user_data"))) = "parent\n";
-const char cstr[] __attribute__((__section__(".user_data"))) = "child\n";
+const char pstr[] __attribute__((__section__(".user_data"))) = "parent\r\n";
+const char cstr[] __attribute__((__section__(".user_data"))) = "child\r\n";
 
 void Init() __attribute__((__section__(".user_text")));
 

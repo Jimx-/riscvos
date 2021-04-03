@@ -3,6 +3,8 @@
 #include "virtio.h"
 #include "vm.h"
 
+#include "irq.h"
+
 void kernel_main(unsigned int hart_id, void* dtb_phys)
 {
     void* dtb = __va(dtb_phys);
@@ -12,11 +14,21 @@ void kernel_main(unsigned int hart_id, void* dtb_phys)
     init_virtio(dtb);
 
     init_trap();
-    init_proc();
+    /* init_proc(); */
 
     init_blkdev();
 
-    switch_to_user();
+    /* uint8_t buf[1024]; */
+    /* blk_rdwt(0, 0, 1, buf); */
+
+    local_irq_enable();
+
+    restart_local_timer();
+
+    while (1)
+        ;
+
+    /* switch_to_user(); */
 
     /* unreachable */
     return;

@@ -80,7 +80,7 @@ static int fdt_scan_memory(void* blob, unsigned long offset, const char* name,
 
     unsigned long memory_size = 0;
     phys_mem_end = 0;
-    printk("Physical RAM map:\n");
+    printk("Physical RAM map:\r\n");
     int i;
     int first = 1;
     for (i = 0; i < memmap_count; i++) {
@@ -98,10 +98,10 @@ static int fdt_scan_memory(void* blob, unsigned long offset, const char* name,
             phys_mem_end = entry->base + entry->size;
         }
 
-        printk("  mem[0x%016lx - 0x%016lx] usable\n", entry->base,
+        printk("  mem[0x%016lx - 0x%016lx] usable\r\n", entry->base,
                entry->base + entry->size);
     }
-    printk("Memory size: %dk\n", memory_size / 1024);
+    printk("Memory size: %dk\r\n", memory_size / 1024);
 
     return 0;
 }

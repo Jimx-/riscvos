@@ -8,18 +8,7 @@
     .globl switch_context
     .globl restore_user_context
 
-.macro test_in_kernel   label
-    /* determine whether we were in kernel or userspace before the trap */
-    csrr s0, sstatus
-    andi s0, s0, SR_SPP
-    bnez \label
-.endm
-
 .macro save_context
-    /* save all registers in proc struct, tp is the pointer to current proc */
-    /* save user sp and restore kernel sp */
-    sd sp, P_USER_SP(tp)
-    ld sp, P_KERNEL_SP(tp)
     addi sp, sp, -(P_FRAMESIZE)
 
     /* save all general registers */
@@ -53,16 +42,16 @@
     sd x30, T5REG(sp)
     sd x31, T6REG(sp)
 
-    /* disable user memory access */
     li t0, SR_SUM
     csrrc s0, sstatus, t0
 
-    ld s7, P_USER_SP(tp)
+    addi s7, sp, P_FRAMESIZE
     csrr s8, sepc
     csrr s9, sbadaddr
     csrr s10, scause
     csrr s11, sscratch
 
+    sd s0, SSTATUSREG(sp)
     sd s7, SPREG(sp)
     sd s8, SEPCREG(sp)
     sd s9, SBADADDRREG(sp)
@@ -72,11 +61,6 @@
 
 .align 4
 trap_entry:
-    /* sscratch == 0 if the call is from kernel, otherwise sscratch is a pointer to
-     * the calling proc */
-    csrrw tp, sscratch, tp
-    beqz tp, trap_entry_kernel
-
     save_context
 
     /* clear sscratch as we are already in kernel */
@@ -92,19 +76,16 @@ trap_entry:
     bge s10, zero, do_exception /* s10 was set to scause in save_context */
 
 do_irq:
-    mv a0, tp
+    mv a0, s10
     call handle_irq
 
-    call switch_to_user
-    j restore_user_context
+    j restore_all
 
 do_exception:
-    li t0, EXC_SYSCALL
-    beq s10, t0, do_syscall
-
     ld a0, SSTATUSREG(sp)
     andi a0, a0, SR_SPP     /* in_kernel */
-    mv a1, tp               /* proc_ptr */
+    mv a1, s9               /* sbadaddr */
+    mv a2, s8               /* sepc */
 
     slli t0, s10, 3
     la t1, exc_vector_table
@@ -115,43 +96,11 @@ do_exception:
     ld t0, 0(t0)
     jalr t0
 
-    call switch_to_user
-    j restore_user_context
+    j restore_all
 
 1:
     call do_trap_unknown
-    call switch_to_user
-    j restore_user_context
-
-do_syscall:
-    sd a0, P_ORIGA0(sp)
-
-    /* relocate the return pc(skip the original scall instruction) */
-    addi s8, s8, 0x4
-    sd s8, SEPCREG(sp)
-
-    li t0, NR_SYSCALLS
-    la s0, sys_nop
-    /* syscall number held in a0 */
-    bgeu a0, t0, 1f
-    la s0, syscall_table
-    slli t0, a0, 3
-    add s0, s0, t0
-    ld s0, 0(s0)
-1:
-    /* replace syscall number with pointer to current proc */
-    mv a0, tp
-    jalr s0
-
-    /* save return value */
-    sd a0, A0REG(sp)
-
-    call switch_to_user
-    j restore_user_context
-
-trap_entry_kernel:
-    csrr tp, sscratch
-    j trap_entry_kernel
+    j restore_all
 
 restore_user_context:
     ld s0, SSTATUSREG(tp)

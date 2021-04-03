@@ -24,7 +24,6 @@ static long sys_fork(struct proc* p)
     struct reg_context *parent_context, *child_context;
     int pid;
 
-    printk("fork\n");
     /* find an empty slot in the proc table */
     for (i = 0; i < PROC_MAX; i++, pp++) {
         if (pp->state & PST_FREESLOT) {
@@ -73,7 +72,24 @@ static long sys_fork(struct proc* p)
     return pid;
 }
 
+static long sys_open(struct proc* p, const char* name, unsigned int name_len, int flags, int mode) {
+    int fd = -1;
+    char pathname[PATH_MAX + 1];
+
+    if (name_len > PATH_MAX) {
+        return -ENAMETOOLONG;
+    }
+
+    copy_from_user(pathname, name, name_len);
+    pathname[name_len] = 0;
+
+    /* ... */
+
+    return fd;
+}
+
 void* syscall_table[NR_SYSCALLS] = {
     [SYS_WRITE_CONSOLE] = sys_write_console,
     [SYS_FORK] = sys_fork,
+    [SYS_OPEN] = sys_open,
 };

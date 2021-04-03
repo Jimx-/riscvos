@@ -79,7 +79,7 @@ int init_blkdev()
         2, blk_features, sizeof(blk_features) / sizeof(struct virtio_feature));
 
     if (!blk_dev) {
-        printk("blkdev: no block device found\n");
+        printk("blkdev: no block device found\n\r");
         return ENXIO;
     }
 
@@ -101,12 +101,12 @@ static int virtio_blk_config()
     cap_high = virtio_cread32(blk_dev, 4);
     blk_config.capacity = ((uint64_t)cap_high << 32) | cap_low;
 
-    printk("blkdev: disk size %d MB\n",
+    printk("blkdev: disk size %d MB\r\n",
            (blk_config.capacity * VIRTIO_BLK_BLOCK_SIZE) >> 20);
 
     if (virtio_device_supports(blk_dev, VIRTIO_BLK_F_SEG_MAX)) {
         blk_config.seg_max = virtio_cread32(blk_dev, 12);
-        printk("blkdev: segment max=%d\n", blk_config.seg_max);
+        printk("blkdev: segment max=%d\r\n", blk_config.seg_max);
     }
 
     if (virtio_device_supports(blk_dev, VIRTIO_BLK_F_GEOMETRY)) {
@@ -114,14 +114,14 @@ static int virtio_blk_config()
         blk_config.geometry.heads = virtio_cread8(blk_dev, 18);
         blk_config.geometry.sectors = virtio_cread8(blk_dev, 19);
 
-        printk("blkdev: cylinders=%d heads=%d sectors=%d\n",
+        printk("blkdev: cylinders=%d heads=%d sectors=%d\r\n",
                blk_config.geometry.cylinders, blk_config.geometry.heads,
                blk_config.geometry.sectors);
     }
 
     if (virtio_device_supports(blk_dev, VIRTIO_BLK_F_BLK_SIZE)) {
         blk_config.blk_size = virtio_cread32(blk_dev, 20);
-        printk("blkdev: block size=%d\n", blk_config.blk_size);
+        printk("blkdev: block size=%d\r\n", blk_config.blk_size);
     }
 
     return 0;

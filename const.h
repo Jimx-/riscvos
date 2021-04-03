@@ -1,12 +1,13 @@
 #ifndef _CONST_H_
 #define _CONST_H_
 
-#define KSTACK_SIZE 0x1000 /* kernel stack size 4kB */
+#define KSTACK_SIZE 0x10000 /* kernel stack size 4kB */
 
 /* syscall numbers */
-#define NR_SYSCALLS 2
+#define NR_SYSCALLS 3
 #define SYS_WRITE_CONSOLE 0 /* write a string to console */
 #define SYS_FORK 1          /* fork */
+#define SYS_OPEN 2          /* open a file */
 
 #ifndef __ASSEMBLY__
 
@@ -19,5 +20,7 @@
 #define SYSTEM_HZ 100
 
 #define BLOCK_SIZE 0x1000
+
+#define PATH_MAX 256
 
 #endif
