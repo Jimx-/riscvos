@@ -26,6 +26,12 @@ SECTIONS{
         _edata = .;
     }
     . = ALIGN(4096);
+    .data.cpulocals : {
+        _cpulocals_start = .;
+         *(.data.cpulocals)
+        _cpulocals_end = .;
+    }
+    . = ALIGN(4096);
     .bss : {
         _bss = .;
          *(COMMON)

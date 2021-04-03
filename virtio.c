@@ -171,8 +171,11 @@ int virtio_alloc_queues(struct virtio_dev* dev, int num_queues)
     memset(dev->queues, 0, dev->queue_size);
     dev->num_queues = num_queues;
 
+    irq_unmask(dev->irq);
+
     int retval;
     if ((retval = init_phys_queues(dev)) != 0) {
+        irq_mask(dev->irq);
         free_mem(__pa(dev->queues), dev->queue_size);
         dev->queues = NULL;
         return retval;

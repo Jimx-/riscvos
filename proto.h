@@ -67,4 +67,10 @@ void slabfree(void* mem, size_t bytes);
 int init_blkdev();
 int blk_rdwt(int write, unsigned int block_num, size_t count, uint8_t* buf);
 
+/* irq.c */
+void init_plic(void* dtb);
+void init_irq_cpu(int cpu);
+void irq_mask(int hwirq);
+void irq_unmask(int hwirq);
+
 #endif

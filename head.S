@@ -29,6 +29,7 @@ _start:
     call enable_paging
 
     /* reload stack pointer */
+    li tp, 0
     la sp, KStackTop
 
     mv a0, s0

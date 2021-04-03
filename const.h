@@ -1,7 +1,7 @@
 #ifndef _CONST_H_
 #define _CONST_H_
 
-#define KSTACK_SIZE 0x10000 /* kernel stack size 4kB */
+#define KSTACK_SIZE 0x8000 /* kernel stack size 4kB */
 
 /* syscall numbers */
 #define NR_SYSCALLS 3

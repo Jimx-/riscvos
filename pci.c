@@ -2,8 +2,9 @@
 #include "errno.h"
 #include "fdt.h"
 #include "global.h"
-#include "pci.h"
 #include "proto.h"
+
+#include "pci.h"
 
 #include <errno.h>
 
@@ -271,9 +272,6 @@ static int record_bar(struct pcidev* dev, int bar_nr, int last)
 
         dev->bars[nr_bars].base = host_base;
     }
-
-    printk("%d %lx %lx\r\n", bar_nr, dev->bars[nr_bars].base,
-           dev->bars[nr_bars].size);
 
     return width;
 }
