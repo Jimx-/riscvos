@@ -4,6 +4,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "virtio_config.h"
+
+struct virtio_dev;
+struct virtio_queue;
+
 struct virtio_feature {
     uint8_t bit;
     uint8_t dev_support;
@@ -44,9 +49,13 @@ struct virtq {
 };
 
 struct virtio_queue {
+    struct virtio_dev* dev;
     void* vir_addr;
     unsigned long phys_addr;
 
+    int (*notify)(struct virtio_queue*);
+
+    unsigned int index;
     uint16_t num;
     uint32_t size;
     struct virtq virtq;
@@ -56,6 +65,22 @@ struct virtio_buffer {
     unsigned long phys_addr;
     size_t size;
     int write;
+};
+
+struct virtio_config_ops {
+    void (*get)(struct virtio_dev* vdev, unsigned offset, void* buf,
+                unsigned len);
+    void (*set)(struct virtio_dev* vdev, unsigned offset, const void* buf,
+                unsigned len);
+    uint8_t (*get_status)(struct virtio_dev* vdev);
+    void (*set_status)(struct virtio_dev* vdev, uint8_t status);
+    void (*reset)(struct virtio_dev* dev);
+    int (*had_irq)(struct virtio_dev* vdev);
+    int (*get_features)(struct virtio_dev* vdev);
+    int (*finalize_features)(struct virtio_dev* vdev);
+    int (*find_vqs)(struct virtio_dev* vdev, unsigned nvqs,
+                    struct virtio_queue* vqs[]);
+    void (*del_vqs)(struct virtio_dev* vdev);
 };
 
 struct virtio_dev {
@@ -74,6 +99,8 @@ struct virtio_dev {
     size_t queue_size;
 
     int irq;
+
+    const struct virtio_config_ops* config;
 };
 
 #define VIRTIO_VERSION_OFF 0x004
@@ -100,30 +127,75 @@ struct virtio_dev {
 #define VIRTIO_STATUS_DRV 0x2
 #define VIRTIO_STATUS_DRV_OK 0x4
 
-void init_virtio();
+struct virtio_queue*
+vring_create_virtqueue(struct virtio_dev* dev, unsigned int index,
+                       unsigned int num, int (*notify)(struct virtio_queue*));
 
-struct virtio_dev* virtio_get_dev(unsigned int did,
-                                  struct virtio_feature* features,
-                                  int num_features);
+void init_virtio_mmio();
 
-int virtio_alloc_queues(struct virtio_dev* dev, int num_queues);
-int virtio_write_queue(struct virtio_dev* dev, int qidx,
+struct virtio_dev* virtio_mmio_get_dev(unsigned device_id);
+
+struct virtio_dev* virtio_probe_device(uint32_t subdid,
+                                       struct virtio_feature* features,
+                                       int num_features);
+
+int virtio_alloc_queues(struct virtio_dev* dev, unsigned int nvqs,
+                        struct virtio_queue* vqs[]);
+
+int virtio_write_queue(struct virtio_queue* vq, int qidx,
                        struct virtio_buffer* bufs, int num);
+
+int virtio_kick_queue(struct virtio_queue* vq);
 
 int virtio_device_supports(struct virtio_dev* dev, int bit);
 
-void virtio_device_ready(struct virtio_dev* dev);
-
-int virtio_had_irq(struct virtio_dev* dev);
 void virtio_ack_irq(struct virtio_dev* dev);
 
-uint32_t virtio_read32(struct virtio_dev* dev, unsigned int off);
-void virtio_write8(struct virtio_dev* dev, unsigned int off, uint8_t val);
-void virtio_write16(struct virtio_dev* dev, unsigned int off, uint16_t val);
-void virtio_write32(struct virtio_dev* dev, unsigned int off, uint32_t val);
+static inline int virtio_find_vqs(struct virtio_dev* dev, unsigned nvqs,
+                                  struct virtio_queue* vqs[])
+{
+    return dev->config->find_vqs(dev, nvqs, vqs);
+}
 
-uint8_t virtio_cread8(struct virtio_dev* dev, unsigned int off);
-uint16_t virtio_cread16(struct virtio_dev* dev, unsigned int off);
-uint32_t virtio_cread32(struct virtio_dev* dev, unsigned int off);
+static inline int virtio_had_irq(struct virtio_dev* dev)
+{
+    return dev->config->had_irq(dev);
+}
+
+static inline uint8_t virtio_cread8(struct virtio_dev* vdev, unsigned offset)
+{
+    uint8_t v;
+
+    vdev->config->get(vdev, offset, &v, sizeof(v));
+    return v;
+}
+
+static inline uint16_t virtio_cread16(struct virtio_dev* vdev, unsigned offset)
+{
+    uint16_t v;
+
+    vdev->config->get(vdev, offset, &v, sizeof(v));
+    return v;
+}
+
+static inline uint32_t virtio_cread32(struct virtio_dev* vdev, unsigned offset)
+{
+    uint32_t v;
+
+    vdev->config->get(vdev, offset, &v, sizeof(v));
+    return v;
+}
+
+static inline void virtio_cwrite32(struct virtio_dev* vdev, unsigned offset,
+                                   uint32_t val)
+{
+    vdev->config->set(vdev, offset, &val, sizeof(val));
+}
+
+static inline void virtio_device_ready(struct virtio_dev* dev)
+{
+    unsigned int status = dev->config->get_status(dev);
+    dev->config->set_status(dev, status | VIRTIO_STATUS_DRV_OK);
+}
 
 #endif

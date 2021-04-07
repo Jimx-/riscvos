@@ -7,6 +7,7 @@
 #include <string.h>
 
 static struct virtio_dev* blk_dev;
+static struct virtio_queue* vq;
 
 /* Feature bits */
 #define VIRTIO_BLK_F_BARRIER 0   /* Does host support barriers? */
@@ -75,7 +76,7 @@ int init_blkdev()
 {
     int retval;
 
-    blk_dev = virtio_get_dev(
+    blk_dev = virtio_probe_device(
         2, blk_features, sizeof(blk_features) / sizeof(struct virtio_feature));
 
     if (!blk_dev) {
@@ -83,7 +84,7 @@ int init_blkdev()
         return ENXIO;
     }
 
-    retval = virtio_alloc_queues(blk_dev, 1);
+    retval = virtio_find_vqs(blk_dev, 1, &vq);
     if (retval) return retval;
 
     retval = virtio_blk_config();
@@ -179,8 +180,10 @@ static int64_t virtio_blk_rdwt(int write, uint64_t position, size_t size,
     bufs[2].size = 1;
     bufs[2].write = 1;
 
-    retval = virtio_write_queue(blk_dev, 0, bufs, 3);
+    retval = virtio_write_queue(vq, 0, bufs, 3);
     if (retval) return -retval;
+
+    virtio_kick_queue(vq);
 
     /* wait for irq */
     while (!virtio_had_irq(blk_dev))

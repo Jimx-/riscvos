@@ -150,7 +150,7 @@ restore_all:
     ld x31, T6REG(sp)
 
     ld x4,  TPREG(sp)
-    ld x2,  SPREG(sp)
+    ld sp,  SPREG(sp)
 
     sret
 

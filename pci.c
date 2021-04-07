@@ -345,3 +345,14 @@ PCI_OP_READ(dword, uint32_t, 4)
 PCI_OP_WRITE(byte, uint8_t, 1)
 PCI_OP_WRITE(word, uint16_t, 2)
 PCI_OP_WRITE(dword, uint32_t, 4)
+
+struct pcidev* pci_get_device(uint16_t vid, uint16_t did)
+{
+    struct pcidev* dev;
+
+    for (dev = pcidev; dev < pcidev + nr_pcidev; dev++) {
+        if (dev->vid == vid && dev->did == did) return dev;
+    }
+
+    return NULL;
+}

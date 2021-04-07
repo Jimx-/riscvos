@@ -137,6 +137,7 @@ static void plic_handle_irq(void)
 
     while ((hwirq = *(volatile uint32_t*)claim)) {
         *(volatile uint32_t*)claim = hwirq;
+        printk("hwirq %d\r\n", hwirq);
         saved_hwirq = hwirq;
     }
     csr_set(sie, SIE_SEIE);
@@ -144,6 +145,7 @@ static void plic_handle_irq(void)
 
 void handle_irq(reg_t scause)
 {
+    printk("Interrupt\r\n");
     switch (scause & ~INTERRUPT_CAUSE_FLAG) {
     case INTERRUPT_CAUSE_TIMER:
         timer_interrupt();

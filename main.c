@@ -9,6 +9,8 @@
 
 #include "stackframe.h"
 
+uint8_t buf[4096];
+
 void kernel_main(unsigned int hart_id, void* dtb_phys)
 {
     void* dtb = __va(dtb_phys);
@@ -16,7 +18,7 @@ void kernel_main(unsigned int hart_id, void* dtb_phys)
     init_memory(dtb);
     init_timer(dtb);
     init_plic(dtb);
-    init_virtio(dtb);
+    init_virtio_mmio(dtb);
     init_pci_host(dtb);
 
     init_trap();
@@ -27,15 +29,15 @@ void kernel_main(unsigned int hart_id, void* dtb_phys)
 
     init_blkdev();
 
-    uint8_t buf[1024];
     blk_rdwt(0, 0, 1, buf);
     blk_rdwt(0, 0, 1, buf);
     blk_rdwt(0, 0, 1, buf);
 
     printk("SMP %d\r\n", smp_processor_id());
-    printk("%d\n", sizeof(struct reg_context));
 
-    /* restart_local_timer(); */
+    /* printk("%d\n", sizeof(struct reg_context)); */
+
+    restart_local_timer();
 
     while (1)
         ;
