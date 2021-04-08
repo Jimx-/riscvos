@@ -18,6 +18,12 @@ struct pcibus {
         size_t size;
         unsigned long alloc_offset;
     } resources[10];
+
+    uint32_t imask[4];
+    struct {
+        uint32_t child_intr[4];
+        unsigned int irq_nr;
+    } imap[16];
 };
 
 struct pcidev {
@@ -98,6 +104,36 @@ struct pcidev {
 #define PCI_MINGNT 0x3E             /* Min Grant */
 #define PCI_MAXLAT 0x3F             /* Max Latency */
 
+/* Capability lists */
+
+#define PCI_CAP_LIST_ID 0      /* Capability ID */
+#define PCI_CAP_ID_PM 0x01     /* Power Management */
+#define PCI_CAP_ID_AGP 0x02    /* Accelerated Graphics Port */
+#define PCI_CAP_ID_VPD 0x03    /* Vital Product Data */
+#define PCI_CAP_ID_SLOTID 0x04 /* Slot Identification */
+#define PCI_CAP_ID_MSI 0x05    /* Message Signalled Interrupts */
+#define PCI_CAP_ID_CHSWP 0x06  /* CompactPCI HotSwap */
+#define PCI_CAP_ID_PCIX 0x07   /* PCI-X */
+#define PCI_CAP_ID_HT 0x08     /* HyperTransport */
+#define PCI_CAP_ID_VNDR 0x09   /* Vendor-Specific */
+#define PCI_CAP_ID_DBG 0x0A    /* Debug port */
+#define PCI_CAP_ID_CCRC 0x0B   /* CompactPCI Central Resource Control */
+#define PCI_CAP_ID_SHPC 0x0C   /* PCI Standard Hot-Plug Controller */
+#define PCI_CAP_ID_SSVID 0x0D  /* Bridge subsystem vendor/device ID */
+#define PCI_CAP_ID_AGP3 0x0E   /* AGP Target PCI-PCI bridge */
+#define PCI_CAP_ID_SECDEV 0x0F /* Secure Device */
+#define PCI_CAP_ID_EXP 0x10    /* PCI Express */
+#define PCI_CAP_ID_MSIX 0x11   /* MSI-X */
+#define PCI_CAP_ID_SATA 0x12   /* SATA Data/Index Conf. */
+#define PCI_CAP_ID_AF 0x13     /* PCI Advanced Features */
+#define PCI_CAP_ID_EA 0x14     /* PCI Enhanced Allocation */
+#define PCI_CAP_ID_MAX PCI_CAP_ID_EA
+#define PCI_CAP_LIST_NEXT 1 /* Next capability in the list */
+#define PCI_CAP_FLAGS 2     /* Capability defined flags (16 bits) */
+#define PCI_CAP_SIZEOF 4
+
+#define PCI_SLOT(devfn) (((devfn) >> 3) & 0x1f)
+
 void init_pci_host(void* dtb);
 
 int pci_bus_read_config_byte(struct pcibus* bus, unsigned int devfn, int pos,
@@ -114,5 +150,20 @@ int pci_bus_write_config_dword(struct pcibus* bus, unsigned int devfn, int pos,
                                uint32_t value);
 
 struct pcidev* pci_get_device(uint16_t vid, uint16_t did);
+
+int pci_read_attr_byte(struct pcidev* dev, int pos, uint8_t* value);
+int pci_read_attr_word(struct pcidev* dev, int pos, uint16_t* value);
+int pci_read_attr_dword(struct pcidev* dev, int pos, uint32_t* value);
+int pci_write_attr_byte(struct pcidev* dev, int pos, uint8_t value);
+int pci_write_attr_word(struct pcidev* dev, int pos, uint16_t value);
+int pci_write_attr_dword(struct pcidev* dev, int pos, uint32_t value);
+
+int pci_get_bar(struct pcidev* dev, int port, unsigned long* base, size_t* size,
+                int* ioflag);
+
+int pci_find_capability(struct pcidev* dev, int cap);
+int pci_find_next_capability(struct pcidev* dev, uint8_t pos, int cap);
+
+int pci_get_intx_irq(struct pcidev* dev);
 
 #endif

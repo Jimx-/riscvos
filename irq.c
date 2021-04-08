@@ -131,15 +131,14 @@ static void plic_handle_irq(void)
     struct plic_context* ctx = get_cpulocal_var_ptr(plic_contexts);
     uint32_t* claim = ctx->hart_base + CONTEXT_CLAIM;
     int hwirq;
-    int saved_hwirq;
 
     csr_clear(sie, SIE_SEIE);
 
     while ((hwirq = *(volatile uint32_t*)claim)) {
         *(volatile uint32_t*)claim = hwirq;
         printk("hwirq %d\r\n", hwirq);
-        saved_hwirq = hwirq;
     }
+
     csr_set(sie, SIE_SEIE);
 }
 

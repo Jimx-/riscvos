@@ -14,15 +14,17 @@ static uint32_t vm_read32(struct virtio_dev* dev, unsigned int off)
     return *(uint32_t*)(dev->vir_base + off);
 }
 
-static void vm_write8(struct virtio_dev* dev, unsigned int off, uint8_t val)
-{
-    *(uint8_t*)(dev->vir_base + off) = val;
-}
+/* static void vm_write8(struct virtio_dev* dev, unsigned int off, uint8_t val)
+ */
+/* { */
+/*     *(uint8_t*)(dev->vir_base + off) = val; */
+/* } */
 
-static void vm_write16(struct virtio_dev* dev, unsigned int off, uint16_t val)
-{
-    *(uint16_t*)(dev->vir_base + off) = val;
-}
+/* static void vm_write16(struct virtio_dev* dev, unsigned int off, uint16_t
+ * val) */
+/* { */
+/*     *(uint16_t*)(dev->vir_base + off) = val; */
+/* } */
 
 static void vm_write32(struct virtio_dev* dev, unsigned int off, uint32_t val)
 {
@@ -147,7 +149,7 @@ static int setup_vq(struct virtio_dev* dev, unsigned int qidx,
 static int vm_find_vqs(struct virtio_dev* dev, unsigned int nvqs,
                        struct virtio_queue* vqs[])
 {
-    int i;
+    unsigned int i;
 
     if (nvqs < 0 || nvqs >= 256) {
         return EINVAL;

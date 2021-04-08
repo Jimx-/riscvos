@@ -73,8 +73,8 @@ struct virtio_queue* vring_create_virtqueue(struct virtio_dev* dev,
     return q;
 }
 
-int virtio_write_queue(struct virtio_queue* q, int qidx,
-                       struct virtio_buffer* bufs, int num)
+int virtio_write_queue(struct virtio_queue* q, struct virtio_buffer* bufs,
+                       int num)
 {
     int i;
     struct virtq* vq = &q->virtq;
@@ -142,11 +142,14 @@ static int negotiate_features(struct virtio_dev* dev)
 }
 
 struct virtio_dev* virtio_probe_device(uint32_t subdid,
-                                          struct virtio_feature* features,
-                                          int num_features)
+                                       struct virtio_feature* features,
+                                       int num_features)
 {
     int retval;
     struct virtio_dev* dev = virtio_mmio_get_dev(subdid);
+    if (!dev) {
+        dev = virtio_pci_get_dev(subdid);
+    }
     if (!dev) return NULL;
 
     dev->features = features;

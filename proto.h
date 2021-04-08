@@ -73,4 +73,7 @@ void init_irq_cpu(int cpu);
 void irq_mask(int hwirq);
 void irq_unmask(int hwirq);
 
+/* vsock.c */
+int init_vsock(void);
+
 #endif

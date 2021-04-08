@@ -23,7 +23,7 @@ struct iomap {
     size_t size;
 };
 
-#define IOMAP_MAX 10
+#define IOMAP_MAX 20
 static struct iomap iomaps[IOMAP_MAX];
 static int num_iomaps = 0;
 

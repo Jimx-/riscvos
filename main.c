@@ -27,11 +27,13 @@ void kernel_main(unsigned int hart_id, void* dtb_phys)
     init_irq_cpu(smp_processor_id());
     local_irq_enable();
 
-    init_blkdev();
+    init_vsock();
 
-    blk_rdwt(0, 0, 1, buf);
-    blk_rdwt(0, 0, 1, buf);
-    blk_rdwt(0, 0, 1, buf);
+    /* init_blkdev(); */
+
+    /* blk_rdwt(0, 0, 1, buf); */
+    /* blk_rdwt(0, 0, 1, buf); */
+    /* blk_rdwt(0, 0, 1, buf); */
 
     printk("SMP %d\r\n", smp_processor_id());
 

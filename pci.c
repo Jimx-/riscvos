@@ -23,6 +23,56 @@ static int nr_pcidev = 0;
 static void pci_probe_bus(struct pcibus* bus);
 static void record_bars(struct pcidev* dev, int last_reg);
 
+static void fdt_parse_pci_interrupt(void* blob, unsigned long offset,
+                                    struct pcibus* bus)
+{
+    int addr_cells, intr_cells;
+    const uint32_t* prop;
+    const uint32_t *imap, *imap_lim;
+    int len;
+
+    if ((prop = fdt_getprop(blob, offset, "#address-cells", NULL)) != NULL) {
+        addr_cells = be32_to_cpup(prop);
+    }
+    if ((prop = fdt_getprop(blob, offset, "#interrupt-cells", NULL)) != NULL) {
+        intr_cells = be32_to_cpup(prop);
+    }
+
+    imap = fdt_getprop(blob, offset, "interrupt-map", &len);
+    if (!imap) return;
+    imap_lim = (uint32_t*)((char*)imap + len);
+
+    if ((prop = fdt_getprop(blob, offset, "interrupt-map-mask", NULL)) !=
+        NULL) {
+        int i;
+        for (i = 0; i < 4; i++)
+            bus->imask[i] = be32_to_cpup(&prop[i]);
+    }
+
+    int i = 0;
+    while (imap < imap_lim) {
+        unsigned long child_intr, child_intr_hi;
+        unsigned int pin, phandle, irq_nr;
+
+        child_intr_hi = of_read_number(imap, 1);
+        child_intr = of_read_number(imap + 1, 2);
+        imap += addr_cells;
+        pin = of_read_number(imap, intr_cells);
+        imap += intr_cells;
+        phandle = of_read_number(imap++, 1);
+        irq_nr = of_read_number(imap, intr_cells);
+        imap += intr_cells;
+
+        bus->imap[i].child_intr[0] = child_intr_hi & 0xfffffff;
+        bus->imap[i].child_intr[1] = (child_intr >> 32) & 0xffffffff;
+        bus->imap[i].child_intr[2] = child_intr & 0xffffffff;
+        bus->imap[i].child_intr[3] = pin;
+
+        bus->imap[i].irq_nr = irq_nr;
+        i++;
+    }
+}
+
 static int fdt_scan_pci_host(void* blob, unsigned long offset, const char* name,
                              int depth, void* arg)
 {
@@ -75,7 +125,7 @@ static int fdt_scan_pci_host(void* blob, unsigned long offset, const char* name,
             flags = PCI_RESOURCE_MEM;
             break;
         default:
-            return 0;
+            continue;
         }
 
         bus->resources[bus->nr_resources].flags = flags;
@@ -88,6 +138,8 @@ static int fdt_scan_pci_host(void* blob, unsigned long offset, const char* name,
         printk("pci:  %6s %012lx..%012lx -> %012lx\r\n", range_type,
                parent_addr, parent_addr + range_size - 1, child_addr);
     }
+
+    fdt_parse_pci_interrupt(blob, offset, bus);
 
     bus->busnr = 0;
 
@@ -355,4 +407,125 @@ struct pcidev* pci_get_device(uint16_t vid, uint16_t did)
     }
 
     return NULL;
+}
+
+#define PCI_READ_ATTR(size, type, len)                                       \
+    int pci_read_attr_##size(struct pcidev* dev, int pos, type* value)       \
+    {                                                                        \
+        return pci_bus_read_config_##size(dev->bus, dev->devfn, pos, value); \
+    }
+
+#define PCI_WRITE_ATTR(size, type, len)                                       \
+    int pci_write_attr_##size(struct pcidev* dev, int pos, type value)        \
+    {                                                                         \
+        return pci_bus_write_config_##size(dev->bus, dev->devfn, pos, value); \
+    }
+
+PCI_READ_ATTR(byte, uint8_t, 1)
+PCI_READ_ATTR(word, uint16_t, 2)
+PCI_READ_ATTR(dword, uint32_t, 4)
+PCI_WRITE_ATTR(byte, uint8_t, 1)
+PCI_WRITE_ATTR(word, uint16_t, 2)
+PCI_WRITE_ATTR(dword, uint32_t, 4)
+
+static int pci_find_cap_start(struct pcidev* dev)
+{
+    uint8_t status;
+
+    pci_read_attr_byte(dev, PCI_SR, &status);
+
+    if (!(status & PSR_CAPPTR)) {
+        return 0;
+    }
+
+    switch (dev->headt) {
+    case PHT_NORMAL:
+    case PHT_BRIDGE:
+        return PCI_CAPPTR;
+    }
+
+    return 0;
+}
+
+static int pci_find_next_cap(struct pcidev* dev, uint8_t pos, int cap)
+{
+    uint8_t id;
+    uint16_t ent;
+
+    pci_read_attr_byte(dev, pos, &pos);
+
+    while (1) {
+        if (pos < 0x40) break;
+        pos &= PCI_CP_MASK;
+        pci_read_attr_word(dev, pos, &ent);
+        id = ent & 0xff;
+        if (id == 0xff) break;
+        if (id == cap) return pos;
+        pos = (ent >> 8);
+    }
+
+    return 0;
+}
+
+int pci_find_capability(struct pcidev* dev, int cap)
+{
+    int pos;
+
+    pos = pci_find_cap_start(dev);
+    if (pos) pos = pci_find_next_cap(dev, pos, cap);
+
+    return pos;
+}
+
+int pci_find_next_capability(struct pcidev* dev, uint8_t pos, int cap)
+{
+    return pci_find_next_cap(dev, pos + PCI_CAP_LIST_NEXT, cap);
+}
+
+int pci_get_bar(struct pcidev* dev, int port, unsigned long* base, size_t* size,
+                int* ioflag)
+{
+    int i, reg;
+
+    for (i = 0; i < dev->nr_bars; i++) {
+        reg = PCI_BAR + 4 * dev->bars[i].nr;
+
+        if (reg == port) {
+            *base = dev->bars[i].base;
+            *size = dev->bars[i].size;
+            *ioflag = dev->bars[i].flags == PCI_RESOURCE_IO;
+
+            return 0;
+        }
+    }
+
+    return EINVAL;
+}
+
+int pci_get_intx_irq(struct pcidev* dev)
+{
+    unsigned int laddr[4];
+    uint8_t pin;
+
+    pci_read_attr_byte(dev, PCI_IPR, &pin);
+
+    laddr[0] = dev->devfn << 8;
+    laddr[1] = laddr[2] = 0;
+    laddr[3] = pin;
+
+    int i, j;
+    for (i = 0; i < 16; i++) {
+        int match = 1;
+
+        for (j = 0; j < 4; j++)
+            if ((laddr[j] & dev->bus->imask[j]) !=
+                dev->bus->imap[i].child_intr[j]) {
+                match = 0;
+                break;
+            }
+
+        if (match) return dev->bus->imap[i].irq_nr;
+    }
+
+    return 0;
 }

@@ -4,8 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "virtio_config.h"
-
 struct virtio_dev;
 struct virtio_queue;
 
@@ -55,6 +53,8 @@ struct virtio_queue {
 
     int (*notify)(struct virtio_queue*);
 
+    void* priv;
+
     unsigned int index;
     uint16_t num;
     uint32_t size;
@@ -83,6 +83,8 @@ struct virtio_config_ops {
     void (*del_vqs)(struct virtio_dev* vdev);
 };
 
+struct virtio_pci_common_cfg;
+
 struct virtio_dev {
     unsigned long reg_base;
     size_t reg_size;
@@ -90,6 +92,17 @@ struct virtio_dev {
 
     unsigned int version;
     unsigned int vid, did;
+
+    uint8_t* isr;
+    struct virtio_pci_common_cfg* common;
+    void* device;
+    void* notify_base;
+    int modern_bars;
+
+    size_t notify_len;
+    size_t device_len;
+    int notify_map_cap;
+    uint32_t notify_offset_multiplier;
 
     struct virtio_feature* features;
     int num_features;
@@ -101,6 +114,8 @@ struct virtio_dev {
     int irq;
 
     const struct virtio_config_ops* config;
+
+    void* private;
 };
 
 #define VIRTIO_VERSION_OFF 0x004
@@ -134,6 +149,7 @@ vring_create_virtqueue(struct virtio_dev* dev, unsigned int index,
 void init_virtio_mmio();
 
 struct virtio_dev* virtio_mmio_get_dev(unsigned device_id);
+struct virtio_dev* virtio_pci_get_dev(unsigned device_id);
 
 struct virtio_dev* virtio_probe_device(uint32_t subdid,
                                        struct virtio_feature* features,
@@ -142,8 +158,8 @@ struct virtio_dev* virtio_probe_device(uint32_t subdid,
 int virtio_alloc_queues(struct virtio_dev* dev, unsigned int nvqs,
                         struct virtio_queue* vqs[]);
 
-int virtio_write_queue(struct virtio_queue* vq, int qidx,
-                       struct virtio_buffer* bufs, int num);
+int virtio_write_queue(struct virtio_queue* vq, struct virtio_buffer* bufs,
+                       int num);
 
 int virtio_kick_queue(struct virtio_queue* vq);
 
@@ -186,11 +202,33 @@ static inline uint32_t virtio_cread32(struct virtio_dev* vdev, unsigned offset)
     return v;
 }
 
+static inline uint64_t virtio_cread64(struct virtio_dev* vdev, unsigned offset)
+{
+    uint64_t v;
+
+    vdev->config->get(vdev, offset, &v, sizeof(v));
+    return v;
+}
+
 static inline void virtio_cwrite32(struct virtio_dev* vdev, unsigned offset,
                                    uint32_t val)
 {
     vdev->config->set(vdev, offset, &val, sizeof(val));
 }
+
+#define virtio_cread(vdev, structname, member, ptr)                      \
+    do {                                                                 \
+        switch (sizeof(*ptr)) {                                          \
+        case 4:                                                          \
+            *(ptr) = virtio_cread32(vdev, offsetof(structname, member)); \
+            break;                                                       \
+        case 8:                                                          \
+            *(ptr) = virtio_cread64(vdev, offsetof(structname, member)); \
+            break;                                                       \
+        default:                                                         \
+            break;                                                       \
+        }                                                                \
+    } while (0)
 
 static inline void virtio_device_ready(struct virtio_dev* dev)
 {
