@@ -167,7 +167,7 @@ static int vp_notify(struct virtio_queue* vq)
 }
 
 static int setup_vq(struct virtio_dev* vdev, unsigned index,
-                    struct virtio_queue** vqp)
+                    vq_callback_t callback, struct virtio_queue** vqp)
 {
     struct virtio_queue* vq;
     struct virtio_pci_common_cfg* cfg = vdev->common;
@@ -192,7 +192,7 @@ static int setup_vq(struct virtio_dev* vdev, unsigned index,
 
     off = vp_read16(&cfg->queue_notify_off);
 
-    vq = vring_create_virtqueue(vdev, index, num, vp_notify);
+    vq = vring_create_virtqueue(vdev, index, num, vp_notify, callback);
     if (!vq) {
         return ENOMEM;
     }
@@ -202,8 +202,7 @@ static int setup_vq(struct virtio_dev* vdev, unsigned index,
     desc_addr = vq->phys_addr;
     avail_addr =
         vq->phys_addr + ((char*)vq->vring.avail - (char*)vq->vring.desc);
-    used_addr =
-        vq->phys_addr + ((char*)vq->vring.used - (char*)vq->vring.desc);
+    used_addr = vq->phys_addr + ((char*)vq->vring.used - (char*)vq->vring.desc);
 
     vp_write64(&cfg->queue_desc_lo, &cfg->queue_desc_hi, desc_addr);
     vp_write64(&cfg->queue_avail_lo, &cfg->queue_avail_hi, avail_addr);
@@ -235,8 +234,29 @@ err_del_queue:
     return retval;
 }
 
+static int vp_interrupt(int irq, void* opaque)
+{
+    struct virtio_dev* vdev = opaque;
+    int ret = 0;
+    uint8_t isr;
+
+    isr = vp_read8(vdev->isr);
+
+    if (!isr) return 0;
+
+    /* vring interrupt */
+    struct virtio_queue* vq;
+    list_for_each_entry(vq, &vdev->virtqueues, list)
+    {
+        ret |= virtqueue_interrupt(irq, vq);
+    }
+
+    return ret;
+}
+
 static int vp_modern_find_vqs(struct virtio_dev* vdev, unsigned nvqs,
-                              struct virtio_queue* vqs[])
+                              struct virtio_queue* vqs[],
+                              vq_callback_t callbacks[])
 {
     unsigned int i;
     int retval;
@@ -245,10 +265,10 @@ static int vp_modern_find_vqs(struct virtio_dev* vdev, unsigned nvqs,
         return EINVAL;
     }
 
-    irq_unmask(vdev->irq);
+    put_irq_handler(vdev->irq, vp_interrupt, vdev);
 
     for (i = 0; i < nvqs; i++) {
-        retval = setup_vq(vdev, i, &vqs[i]);
+        retval = setup_vq(vdev, i, callbacks[i], &vqs[i]);
         if (retval) return retval;
     }
 

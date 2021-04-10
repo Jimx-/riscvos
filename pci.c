@@ -52,14 +52,14 @@ static void fdt_parse_pci_interrupt(void* blob, unsigned long offset,
     int i = 0;
     while (imap < imap_lim) {
         unsigned long child_intr, child_intr_hi;
-        unsigned int pin, phandle, irq_nr;
+        unsigned int pin, irq_nr;
 
         child_intr_hi = of_read_number(imap, 1);
         child_intr = of_read_number(imap + 1, 2);
         imap += addr_cells;
         pin = of_read_number(imap, intr_cells);
         imap += intr_cells;
-        phandle = of_read_number(imap++, 1);
+        imap++;
         irq_nr = of_read_number(imap, intr_cells);
         imap += intr_cells;
 

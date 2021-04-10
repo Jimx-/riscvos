@@ -23,6 +23,14 @@
 #define PLIC_DISABLE_THRESHOLD 0x7
 #define PLIC_ENABLE_THRESHOLD 0
 
+#define NR_IRQS 35
+struct irq_handler {
+    struct list_head list;
+    int (*handler)(int irq, void*);
+    void* data;
+};
+static struct list_head irq_handlers[NR_IRQS];
+
 struct plic {
     void* regs;
 };
@@ -110,7 +118,14 @@ void irq_unmask(int hwirq)
     toggle_irq(ctx, hwirq, 1);
 }
 
-void init_plic(void* dtb) { of_scan_fdt(fdt_scan_plic, NULL, dtb); }
+void init_irq(void* dtb)
+{
+    int i;
+    for (i = 0; i < NR_IRQS; i++)
+        INIT_LIST_HEAD(&irq_handlers[i]);
+
+    of_scan_fdt(fdt_scan_plic, NULL, dtb);
+}
 
 static void plic_set_threshold(struct plic_context* ctx, uint32_t threshold)
 {
@@ -135,8 +150,14 @@ static void plic_handle_irq(void)
     csr_clear(sie, SIE_SEIE);
 
     while ((hwirq = *(volatile uint32_t*)claim)) {
+        struct irq_handler* handler;
+
+        list_for_each_entry(handler, &irq_handlers[hwirq], list)
+        {
+            handler->handler(hwirq, handler->data);
+        }
+
         *(volatile uint32_t*)claim = hwirq;
-        printk("hwirq %d\r\n", hwirq);
     }
 
     csr_set(sie, SIE_SEIE);
@@ -155,4 +176,18 @@ void handle_irq(reg_t scause)
     default:
         break;
     }
+}
+
+void put_irq_handler(int irq, int (*handler)(int, void*), void* data)
+{
+    struct irq_handler* irq_handler;
+    SLABALLOC(irq_handler);
+    if (!irq_handler) return;
+
+    irq_handler->handler = handler;
+    irq_handler->data = data;
+
+    list_add(&irq_handler->list, &irq_handlers[irq]);
+
+    irq_unmask(irq);
 }

@@ -124,7 +124,7 @@ static int vm_notify(struct virtio_queue* vq)
 }
 
 static int setup_vq(struct virtio_dev* dev, unsigned int qidx,
-                    struct virtio_queue** qp)
+                    vq_callback_t callback, struct virtio_queue** qp)
 {
     unsigned int num;
     struct virtio_queue* q;
@@ -134,7 +134,7 @@ static int setup_vq(struct virtio_dev* dev, unsigned int qidx,
 
     num = vm_read32(dev, VIRTIO_Q_NUM_MAX_OFF);
 
-    q = vring_create_virtqueue(dev, qidx, num, vm_notify);
+    q = vring_create_virtqueue(dev, qidx, num, vm_notify, callback);
 
     vm_write32(dev, VIRTIO_Q_NUM_OFF, q->num);
     vm_write32(dev, VIRTIO_Q_ALIGN_OFF, PG_SIZE);
@@ -146,8 +146,28 @@ static int setup_vq(struct virtio_dev* dev, unsigned int qidx,
     return 0;
 }
 
+static int vm_interrupt(int irq, void* opaque)
+{
+    struct virtio_dev* dev = opaque;
+    int ret = 0;
+
+    uint8_t status = vm_read32(dev, VIRTIO_INT_STATUS_OFF);
+    vm_write32(dev, VIRTIO_INT_ACK_OFF, 1);
+
+    if (status & 1) {
+        /* vring interrupt */
+        struct virtio_queue* vq;
+        list_for_each_entry(vq, &dev->virtqueues, list)
+        {
+            ret |= virtqueue_interrupt(irq, vq);
+        }
+    }
+
+    return ret;
+}
+
 static int vm_find_vqs(struct virtio_dev* dev, unsigned int nvqs,
-                       struct virtio_queue* vqs[])
+                       struct virtio_queue* vqs[], vq_callback_t callbacks[])
 {
     unsigned int i;
 
@@ -155,10 +175,10 @@ static int vm_find_vqs(struct virtio_dev* dev, unsigned int nvqs,
         return EINVAL;
     }
 
-    irq_unmask(dev->irq);
+    put_irq_handler(dev->irq, vm_interrupt, dev);
 
     for (i = 0; i < nvqs; i++) {
-        setup_vq(dev, i, &vqs[i]);
+        setup_vq(dev, i, callbacks[i], &vqs[i]);
     }
 
     return 0;
@@ -233,9 +253,4 @@ struct virtio_dev* virtio_mmio_get_dev(unsigned device_id)
     }
 
     return NULL;
-}
-
-void virtio_ack_irq(struct virtio_dev* dev)
-{
-    vm_write32(dev, VIRTIO_INT_ACK_OFF, 1);
 }

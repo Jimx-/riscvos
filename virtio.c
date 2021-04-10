@@ -8,9 +8,11 @@
 struct virtio_queue* vring_create_virtqueue(struct virtio_dev* vdev,
                                             unsigned int index,
                                             unsigned int num,
-                                            int (*notify)(struct virtio_queue*))
+                                            int (*notify)(struct virtio_queue*),
+                                            vq_callback_t callback)
 {
     struct virtio_queue* vq;
+    unsigned long phys;
     int i;
 
     if (num & (num - 1)) {
@@ -30,11 +32,19 @@ struct virtio_queue* vring_create_virtqueue(struct virtio_dev* vdev,
     if (vq->phys_addr == 0) goto out_free_vq;
     vq->vir_addr = __va(vq->phys_addr);
 
+    vq->data_size = roundup(num * sizeof(vq->data[0]), PG_SIZE);
+    phys = alloc_pages(vq->data_size >> PG_SHIFT);
+    if (!phys) goto out_free_vq;
+    vq->data = __va(phys);
+
     memset(vq->vir_addr, 0, vq->size);
+    memset(vq->data, 0, vq->data_size);
     vring_init(&vq->vring, vq->num, vq->vir_addr, PG_SIZE);
 
     vq->dev = vdev;
+    list_add(&vq->list, &vdev->virtqueues);
     vq->notify = notify;
+    vq->callback = callback;
 
     vq->vring.used->flags = 0;
     vq->vring.avail->flags = 0;
@@ -105,10 +115,58 @@ int virtqueue_add_buffers(struct virtio_queue* vq, struct virtio_buffer* bufs,
     set_direct_descriptors(vq, bufs, count);
 
     vring->avail->ring[vring->avail->idx % vq->num] = old_head;
+    vq->data[old_head] = data;
 
     mb();
     vring->avail->idx++;
     mb();
+
+    return 0;
+}
+
+int virtqueue_get_buffer(struct virtio_queue* vq, size_t* len, void** data)
+{
+    struct vring* vring = &vq->vring;
+    struct vring_used_elem* used_elem;
+    struct vring_desc* vd;
+    u16 used_idx, vd_idx;
+    int count = 0;
+
+    mb();
+
+    used_idx = vring->used->idx;
+    if (vq->last_used == used_idx) {
+        return -1;
+    }
+
+    used_elem = &vring->used->ring[vq->last_used % vq->num];
+    vq->last_used = vq->last_used + 1;
+
+    vd_idx = used_elem->id % vq->num;
+    vd = &vring->desc[vd_idx];
+
+    vring->desc[vq->free_tail].next = vd_idx;
+
+    while (vd->flags & VRING_DESC_F_NEXT) {
+        vd_idx = vd->next;
+        vd = &vring->desc[vd_idx];
+        count++;
+    }
+
+    count++;
+
+    vq->free_tail = vd_idx;
+    vring->desc[vq->free_tail].next = vq->free_head;
+    vring->desc[vq->free_tail].flags = VRING_DESC_F_NEXT;
+
+    vq->free_num += count;
+
+    *data = vq->data[used_elem->id];
+    vq->data[used_elem->id] = NULL;
+
+    if (len) {
+        *len = used_elem->len;
+    }
 
     return 0;
 }
@@ -135,6 +193,23 @@ int virtqueue_kick(struct virtio_queue* vq)
         return virtqueue_notify(vq);
     else
         return 0;
+}
+
+static int more_used(struct virtio_queue* vq)
+{
+    uint16_t used_idx;
+    mb();
+    used_idx = vq->vring.used->idx;
+    return vq->last_used != used_idx;
+}
+
+int virtqueue_interrupt(int irq, struct virtio_queue* vq)
+{
+    if (!more_used(vq)) return 0;
+
+    if (vq->callback) vq->callback(vq);
+
+    return 1;
 }
 
 void virtio_add_status(struct virtio_dev* vdev, unsigned int status)
@@ -172,6 +247,8 @@ struct virtio_dev* virtio_probe_device(uint32_t subdid,
     if (retval) return NULL;
 
     virtio_add_status(dev, VIRTIO_STATUS_DRV);
+
+    INIT_LIST_HEAD(&dev->virtqueues);
 
     return dev;
 }

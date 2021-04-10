@@ -1,5 +1,7 @@
+#include "global.h"
 #include "proto.h"
 #include "vm.h"
+
 #include <errno.h>
 #include <stddef.h>
 
@@ -92,6 +94,15 @@ unsigned long alloc_pages(size_t nr_pages)
     return 0;
 }
 
+void* vmalloc_pages(size_t nr_pages, unsigned long* phys_addr)
+{
+    unsigned long phys = alloc_pages(nr_pages);
+    if (!phys) return NULL;
+
+    if (phys_addr) *phys_addr = phys;
+    return __va(phys);
+}
+
 int free_mem(unsigned long base, unsigned long len)
 {
     struct hole *hp, *new_ptr, *prev_ptr;
@@ -121,6 +132,8 @@ int free_mem(unsigned long base, unsigned long len)
     merge_hole(prev_ptr);
     return 0;
 }
+
+int vmfree(void* ptr, unsigned long len) { return free_mem(__pa(ptr), len); }
 
 static void delete_slot(struct hole* prev_ptr, struct hole* hp)
 {

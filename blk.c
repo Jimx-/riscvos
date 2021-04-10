@@ -71,10 +71,12 @@ struct virtio_blk_req_header {
 uint8_t dev_status;
 
 static int virtio_blk_config();
+static void virtio_blk_done(struct virtio_queue* vq);
 
 int init_blkdev()
 {
     int retval;
+    vq_callback_t callback = virtio_blk_done;
 
     blk_dev = virtio_probe_device(
         2, blk_features, sizeof(blk_features) / sizeof(struct virtio_feature));
@@ -84,7 +86,7 @@ int init_blkdev()
         return ENXIO;
     }
 
-    retval = virtio_find_vqs(blk_dev, 1, &vq);
+    retval = virtio_find_vqs(blk_dev, 1, &vq, &callback);
     if (retval) return retval;
 
     retval = virtio_blk_config();
@@ -185,17 +187,15 @@ static int64_t virtio_blk_rdwt(int write, uint64_t position, size_t size,
 
     virtqueue_kick(vq);
 
-    /* wait for irq */
-    while (!virtio_had_irq(blk_dev))
-        ;
-    virtio_ack_irq(blk_dev);
+    /* if (dev_status == 0) { */
+    /*     return size; */
+    /* } */
 
-    if (dev_status == 0) {
-        return size;
-    }
-
-    return -virtio_blk_status_to_errno(dev_status);
+    /* return -virtio_blk_status_to_errno(dev_status); */
+    return 0;
 }
+
+static void virtio_blk_done(struct virtio_queue* vq) { printk("blk done\r\n"); }
 
 int blk_rdwt(int write, unsigned int block_num, size_t count, uint8_t* buf)
 {

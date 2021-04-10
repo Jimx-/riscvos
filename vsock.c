@@ -2,6 +2,7 @@
 #include "errno.h"
 #include "global.h"
 #include "proto.h"
+#include "string.h"
 #include "virtio.h"
 
 #include "virtio_vsock.h"
@@ -19,9 +20,71 @@ static struct virtio_queue* vqs[VSOCK_VQ_MAX];
 
 static uint32_t local_port = 8000;
 
+struct virtio_sock_pkt {
+    struct virtio_vsock_hdr hdr;
+    struct list_head list;
+    void* buf;
+    size_t buf_len;
+    size_t len;
+};
+
+static void virtio_vsock_rx_done(struct virtio_queue* vq);
+static void virtio_vsock_tx_done(struct virtio_queue* vq);
+static void virtio_vsock_event_done(struct virtio_queue* vq);
+
+static void virtio_vsock_free_pkt(struct virtio_sock_pkt* pkt)
+{
+    if (pkt->buf) vmfree(pkt->buf, pkt->buf_len);
+    SLABFREE(pkt);
+}
+
+static void virtio_vsock_fill_rx(void)
+{
+    size_t buf_len = PG_SIZE;
+    struct virtio_queue* vq = vqs[VSOCK_VQ_RX];
+    struct virtio_sock_pkt* pkt;
+    struct virtio_buffer bufs[2];
+    int retval;
+
+    while (vq->free_num) {
+        SLABALLOC(pkt);
+        if (!pkt) break;
+
+        pkt->buf_len = roundup(buf_len, PG_SIZE);
+        pkt->buf = vmalloc_pages(pkt->buf_len >> PG_SHIFT, NULL);
+        if (!pkt->buf) {
+            virtio_vsock_free_pkt(pkt);
+            break;
+        }
+
+        pkt->len = buf_len;
+
+        bufs[0].phys_addr = __pa(&pkt->hdr);
+        bufs[0].size = sizeof(pkt->hdr);
+        bufs[0].write = 1;
+
+        bufs[1].phys_addr = __pa(pkt->buf);
+        bufs[1].size = sizeof(buf_len);
+        bufs[1].write = 1;
+
+        retval = virtqueue_add_buffers(vq, bufs, 2, pkt);
+        if (retval) {
+            virtio_vsock_free_pkt(pkt);
+            break;
+        }
+    }
+
+    virtqueue_kick(vq);
+}
+
 int init_vsock(void)
 {
     int retval;
+    vq_callback_t callbacks[] = {
+        virtio_vsock_rx_done,
+        virtio_vsock_tx_done,
+        virtio_vsock_event_done,
+    };
 
     vsock_dev = virtio_probe_device(19, NULL, 0);
 
@@ -30,7 +93,7 @@ int init_vsock(void)
         return ENXIO;
     }
 
-    retval = virtio_find_vqs(vsock_dev, VSOCK_VQ_MAX, vqs);
+    retval = virtio_find_vqs(vsock_dev, VSOCK_VQ_MAX, vqs, callbacks);
     if (retval) return retval;
 
     virtio_cread(vsock_dev, struct virtio_vsock_config, guest_cid,
@@ -40,6 +103,21 @@ int init_vsock(void)
     virtio_device_ready(vsock_dev);
 
     return 0;
+}
+
+static void virtio_vsock_rx_done(struct virtio_queue* vq)
+{
+    printk("RX done\r\n");
+}
+
+static void virtio_vsock_tx_done(struct virtio_queue* vq)
+{
+    printk("TX done\r\n");
+}
+
+static void virtio_vsock_event_done(struct virtio_queue* vq)
+{
+    printk("Event done\r\n");
 }
 
 int virtio_vsock_connect(uint32_t dst_cid, uint32_t dst_port)
@@ -69,5 +147,5 @@ int virtio_vsock_connect(uint32_t dst_cid, uint32_t dst_port)
 
     virtqueue_kick(vq);
 
-    while (!virtio_had_irq(vsock_dev)) ;
+    return 0;
 }

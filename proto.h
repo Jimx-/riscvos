@@ -15,6 +15,8 @@ void panic(const char* fmt, ...);
 /* memory.c */
 void init_memory(void* dtb);
 void* alloc_page(unsigned long* phys_addr);
+void* vmalloc_pages(size_t nr_pages, unsigned long* phys_addr);
+int vmfree(void* ptr, unsigned long len);
 void copy_from_user(void* dst, const void* src, size_t len);
 
 /* vm.c */
@@ -68,10 +70,11 @@ int init_blkdev();
 int blk_rdwt(int write, unsigned int block_num, size_t count, uint8_t* buf);
 
 /* irq.c */
-void init_plic(void* dtb);
+void init_irq(void* dtb);
 void init_irq_cpu(int cpu);
 void irq_mask(int hwirq);
 void irq_unmask(int hwirq);
+void put_irq_handler(int irq, int (*handler)(int, void*), void* data);
 
 /* vsock.c */
 int init_vsock(void);

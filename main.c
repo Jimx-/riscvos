@@ -17,7 +17,7 @@ void kernel_main(unsigned int hart_id, void* dtb_phys)
 
     init_memory(dtb);
     init_timer(dtb);
-    init_plic(dtb);
+    init_irq(dtb);
     init_virtio_mmio(dtb);
     init_pci_host(dtb);
 
@@ -29,9 +29,11 @@ void kernel_main(unsigned int hart_id, void* dtb_phys)
 
     init_vsock();
 
-    init_blkdev();
+    virtio_vsock_connect(2, 9999);
 
-    blk_rdwt(0, 0, 1, buf);
+    /* init_blkdev(); */
+
+    /* blk_rdwt(0, 0, 1, buf); */
     /* blk_rdwt(0, 0, 1, buf); */
     /* blk_rdwt(0, 0, 1, buf); */
 

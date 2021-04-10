@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "list.h"
+
 #include "virtio_ring.h"
 
 struct virtio_dev;
@@ -49,6 +51,7 @@ struct virtq {
 };
 
 struct virtio_queue {
+    struct list_head list;
     struct virtio_dev* dev;
     void* vir_addr;
     unsigned long phys_addr;
@@ -66,7 +69,14 @@ struct virtio_queue {
     unsigned int free_head;
     unsigned int free_tail;
     unsigned int last_used;
+
+    void** data;
+    size_t data_size;
+
+    void (*callback)(struct virtio_queue*);
 };
+
+typedef void (*vq_callback_t)(struct virtio_queue*);
 
 struct virtio_buffer {
     unsigned long phys_addr;
@@ -86,7 +96,7 @@ struct virtio_config_ops {
     int (*get_features)(struct virtio_dev* vdev);
     int (*finalize_features)(struct virtio_dev* vdev);
     int (*find_vqs)(struct virtio_dev* vdev, unsigned nvqs,
-                    struct virtio_queue* vqs[]);
+                    struct virtio_queue* vqs[], vq_callback_t callbacks[]);
     void (*del_vqs)(struct virtio_dev* vdev);
 };
 
@@ -114,8 +124,7 @@ struct virtio_dev {
     struct virtio_feature* features;
     int num_features;
 
-    struct virtio_queue* queues;
-    int num_queues;
+    struct list_head virtqueues;
     size_t queue_size;
 
     int irq;
@@ -149,9 +158,11 @@ struct virtio_dev {
 #define VIRTIO_STATUS_DRV 0x2
 #define VIRTIO_STATUS_DRV_OK 0x4
 
-struct virtio_queue*
-vring_create_virtqueue(struct virtio_dev* dev, unsigned int index,
-                       unsigned int num, int (*notify)(struct virtio_queue*));
+struct virtio_queue* vring_create_virtqueue(struct virtio_dev* dev,
+                                            unsigned int index,
+                                            unsigned int num,
+                                            int (*notify)(struct virtio_queue*),
+                                            vq_callback_t callback);
 
 void init_virtio_mmio();
 
@@ -168,15 +179,15 @@ int virtio_alloc_queues(struct virtio_dev* dev, unsigned int nvqs,
 int virtqueue_add_buffers(struct virtio_queue* vq, struct virtio_buffer* bufs,
                           size_t count, void* data);
 int virtqueue_kick(struct virtio_queue* vq);
+int virtqueue_interrupt(int irq, struct virtio_queue* vq);
 
 int virtio_device_supports(struct virtio_dev* dev, int bit);
 
-void virtio_ack_irq(struct virtio_dev* dev);
-
 static inline int virtio_find_vqs(struct virtio_dev* dev, unsigned nvqs,
-                                  struct virtio_queue* vqs[])
+                                  struct virtio_queue* vqs[],
+                                  vq_callback_t callbacks[])
 {
-    return dev->config->find_vqs(dev, nvqs, vqs);
+    return dev->config->find_vqs(dev, nvqs, vqs, callbacks);
 }
 
 static inline int virtio_had_irq(struct virtio_dev* dev)
