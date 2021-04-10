@@ -178,6 +178,7 @@ int virtio_alloc_queues(struct virtio_dev* dev, unsigned int nvqs,
 
 int virtqueue_add_buffers(struct virtio_queue* vq, struct virtio_buffer* bufs,
                           size_t count, void* data);
+int virtqueue_get_buffer(struct virtio_queue* vq, size_t* len, void** data);
 int virtqueue_kick(struct virtio_queue* vq);
 int virtqueue_interrupt(int irq, struct virtio_queue* vq);
 

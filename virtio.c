@@ -12,7 +12,6 @@ struct virtio_queue* vring_create_virtqueue(struct virtio_dev* vdev,
                                             vq_callback_t callback)
 {
     struct virtio_queue* vq;
-    unsigned long phys;
     int i;
 
     if (num & (num - 1)) {
@@ -28,14 +27,13 @@ struct virtio_queue* vring_create_virtqueue(struct virtio_dev* vdev,
     vq->num = num;
     vq->size = vring_size(vq->num, PG_SIZE);
 
-    vq->phys_addr = alloc_pages(vq->size >> PG_SHIFT);
+    vq->phys_addr = alloc_pages((vq->size + PG_SIZE - 1) >> PG_SHIFT);
     if (vq->phys_addr == 0) goto out_free_vq;
     vq->vir_addr = __va(vq->phys_addr);
 
     vq->data_size = roundup(num * sizeof(vq->data[0]), PG_SIZE);
-    phys = alloc_pages(vq->data_size >> PG_SHIFT);
-    if (!phys) goto out_free_vq;
-    vq->data = __va(phys);
+    vq->data = vmalloc_pages(vq->data_size >> PG_SHIFT, NULL);
+    if (!vq->data) goto out_free_vq;
 
     memset(vq->vir_addr, 0, vq->size);
     memset(vq->data, 0, vq->data_size);
