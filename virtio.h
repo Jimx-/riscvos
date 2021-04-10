@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "virtio_ring.h"
+
 struct virtio_dev;
 struct virtio_queue;
 
@@ -58,7 +60,12 @@ struct virtio_queue {
     unsigned int index;
     uint16_t num;
     uint32_t size;
-    struct virtq virtq;
+    struct vring vring;
+
+    unsigned int free_num;
+    unsigned int free_head;
+    unsigned int free_tail;
+    unsigned int last_used;
 };
 
 struct virtio_buffer {
@@ -158,10 +165,9 @@ struct virtio_dev* virtio_probe_device(uint32_t subdid,
 int virtio_alloc_queues(struct virtio_dev* dev, unsigned int nvqs,
                         struct virtio_queue* vqs[]);
 
-int virtio_write_queue(struct virtio_queue* vq, struct virtio_buffer* bufs,
-                       int num);
-
-int virtio_kick_queue(struct virtio_queue* vq);
+int virtqueue_add_buffers(struct virtio_queue* vq, struct virtio_buffer* bufs,
+                          size_t count, void* data);
+int virtqueue_kick(struct virtio_queue* vq);
 
 int virtio_device_supports(struct virtio_dev* dev, int bit);
 

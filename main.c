@@ -29,9 +29,9 @@ void kernel_main(unsigned int hart_id, void* dtb_phys)
 
     init_vsock();
 
-    /* init_blkdev(); */
+    init_blkdev();
 
-    /* blk_rdwt(0, 0, 1, buf); */
+    blk_rdwt(0, 0, 1, buf);
     /* blk_rdwt(0, 0, 1, buf); */
     /* blk_rdwt(0, 0, 1, buf); */
 

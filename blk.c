@@ -180,10 +180,10 @@ static int64_t virtio_blk_rdwt(int write, uint64_t position, size_t size,
     bufs[2].size = 1;
     bufs[2].write = 1;
 
-    retval = virtio_write_queue(vq, bufs, 3);
+    retval = virtqueue_add_buffers(vq, bufs, 3, NULL);
     if (retval) return -retval;
 
-    virtio_kick_queue(vq);
+    virtqueue_kick(vq);
 
     /* wait for irq */
     while (!virtio_had_irq(blk_dev))

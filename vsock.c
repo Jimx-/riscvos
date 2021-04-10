@@ -64,10 +64,10 @@ int virtio_vsock_connect(uint32_t dst_cid, uint32_t dst_port)
     buf.size = sizeof(hdr);
     buf.write = 0;
 
-    retval = virtio_write_queue(vq, &buf, 1);
+    retval = virtqueue_add_buffers(vq, &buf, 1, NULL);
     if (retval) return -retval;
 
-    virtio_kick_queue(vq);
+    virtqueue_kick(vq);
 
     while (!virtio_had_irq(vsock_dev)) ;
 }

@@ -201,9 +201,9 @@ static int setup_vq(struct virtio_dev* vdev, unsigned index,
 
     desc_addr = vq->phys_addr;
     avail_addr =
-        vq->phys_addr + ((char*)vq->virtq.avail - (char*)vq->virtq.descs);
+        vq->phys_addr + ((char*)vq->vring.avail - (char*)vq->vring.desc);
     used_addr =
-        vq->phys_addr + ((char*)vq->virtq.used - (char*)vq->virtq.descs);
+        vq->phys_addr + ((char*)vq->vring.used - (char*)vq->vring.desc);
 
     vp_write64(&cfg->queue_desc_lo, &cfg->queue_desc_hi, desc_addr);
     vp_write64(&cfg->queue_avail_lo, &cfg->queue_avail_hi, avail_addr);
