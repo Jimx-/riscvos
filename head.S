@@ -1,6 +1,7 @@
     #include "const.h"
     #include "csr.h"
     #include "vm.h"
+    #include "config.h"
 
     .section ".head","ax"
 
@@ -17,6 +18,12 @@ _start:
     la gp, __global_pointer$
 .option pop
 
+    /* pick one hart as the BSP */
+    la a3, hart_counter
+    li a2, 1
+    amoadd.w a3, a2, (a3)
+    bnez a3, .Lsecondary_start
+
     /* save hart ID and DTB from bootloader */
     mv s0, a0
     mv s1, a1
@@ -29,8 +36,8 @@ _start:
     call enable_paging
 
     /* reload stack pointer */
-    li tp, 0
     la sp, KStackTop
+    mv tp, x0
 
     mv a0, s0
     mv a1, s1
@@ -61,6 +68,9 @@ enable_paging:
     csrw satp, a2
 .align 2
 1:
+    la a1, .Lno_smp
+    csrw stvec, a1
+
     /* reload global pointer */
 .option push
 .option norelax
@@ -69,7 +79,42 @@ enable_paging:
 
     ret
 
+.Lsecondary_start:
+    li a1, CONFIG_SMP_MAX_CPUS
+    bgeu a0, a1, .Lno_smp
+
+    la a3, .Lno_smp
+    csrw stvec, a3
+
+    slli a3, a0, 3
+    la a1, __cpu_stack_pointer
+    la a2, __cpu_task_pointer
+    add a1, a1, a3
+    add a2, a2, a3
+
+.Lap_wait:
+    ld sp, (a1)
+    ld tp, (a2)
+    beqz sp, .Lap_wait
+    beqz tp, .Lap_wait
+
+    fence
+
+    call enable_paging
+    tail smp_boot_ap
+
+.align 2
+.Lno_smp:
+    wfi
+    j .Lno_smp
+
 .section .data
 KStackSpace:
     .zero KSTACK_SIZE
 KStackTop:
+
+.globl k_stacks_start, k_stacks_end
+.balign	KSTACK_SIZE
+k_stacks_start:
+    .space 2 * KSTACK_SIZE * CONFIG_SMP_MAX_CPUS
+k_stacks_end:

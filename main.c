@@ -16,6 +16,7 @@ void kernel_main(unsigned int hart_id, void* dtb_phys)
     void* dtb = __va(dtb_phys);
 
     init_memory(dtb);
+    init_smp(hart_id, dtb);
     init_timer(dtb);
     init_irq(dtb);
     init_virtio_mmio(dtb);
@@ -37,11 +38,11 @@ void kernel_main(unsigned int hart_id, void* dtb_phys)
     /* blk_rdwt(0, 0, 1, buf); */
     /* blk_rdwt(0, 0, 1, buf); */
 
-    printk("SMP %d\r\n", smp_processor_id());
-
     /* printk("%d\n", sizeof(struct reg_context)); */
 
     restart_local_timer();
+
+    smp_commence();
 
     while (1)
         ;

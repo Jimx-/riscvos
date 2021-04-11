@@ -76,6 +76,10 @@ void irq_mask(int hwirq);
 void irq_unmask(int hwirq);
 void put_irq_handler(int irq, int (*handler)(int, void*), void* data);
 
+/* smp.c */
+void init_smp(unsigned int bsp_hart, void* dtb);
+void smp_commence(void);
+
 /* vsock.c */
 int init_vsock(void);
 
