@@ -104,7 +104,7 @@ int init_vsock(void)
 
     virtio_cread(vsock_dev, struct virtio_vsock_config, guest_cid,
                  &vsock_config.guest_cid);
-    printk("vosck: guest_cid=%ld\r\n", vsock_config.guest_cid);
+    printk("vsock: guest_cid=%ld\r\n", vsock_config.guest_cid);
 
     virtio_device_ready(vsock_dev);
 
@@ -151,8 +151,9 @@ static void virtio_vsock_event_done(struct virtio_queue* vq)
 }
 
 static struct virtio_vsock_pkt*
-virtio_vsock_alloc_pkt(uint16_t type, uint64_t op, size_t len, uint32_t src_cid,
-                       uint32_t src_port, uint32_t dst_cid, uint32_t dst_port)
+virtio_vsock_alloc_pkt(uint16_t type, uint64_t op, const char* buf, size_t len,
+                       uint32_t src_cid, uint32_t src_port, uint32_t dst_cid,
+                       uint32_t dst_port)
 {
     struct virtio_vsock_pkt* pkt;
 
@@ -169,10 +170,12 @@ virtio_vsock_alloc_pkt(uint16_t type, uint64_t op, size_t len, uint32_t src_cid,
     pkt->hdr.len = len;
     pkt->len = len;
 
-    if (len) {
+    if (buf && len > 0) {
         pkt->buf_len = roundup(len, PG_SIZE);
         pkt->buf = vmalloc_pages(pkt->buf_len >> PG_SHIFT, NULL);
         if (!pkt->buf) goto out_pkt;
+
+        memcpy(pkt->buf, buf, pkt->len);
     }
 
     return pkt;
@@ -192,8 +195,8 @@ int virtio_vsock_connect(uint32_t dst_cid, uint32_t dst_port)
     int retval;
 
     pkt = virtio_vsock_alloc_pkt(VIRTIO_VSOCK_TYPE_STREAM,
-                                 VIRTIO_VSOCK_OP_REQUEST, 0, src_cid, src_port,
-                                 dst_cid, dst_port);
+                                 VIRTIO_VSOCK_OP_REQUEST, NULL, 0, src_cid,
+                                 src_port, dst_cid, dst_port);
     if (!pkt) return ENOMEM;
 
     buf.phys_addr = __pa(&pkt->hdr);
@@ -202,6 +205,40 @@ int virtio_vsock_connect(uint32_t dst_cid, uint32_t dst_port)
 
     retval = virtqueue_add_buffers(vq, &buf, 1, pkt);
     if (retval) return -retval;
+
+    virtqueue_kick(vq);
+
+    return 0;
+}
+
+int virtio_vsock_send(uint32_t dst_cid, uint32_t dst_port, const char* buf,
+                      size_t len)
+{
+    uint32_t src_cid = vsock_config.guest_cid;
+    uint32_t src_port = local_port;
+    struct virtio_queue* vq = vqs[VSOCK_VQ_TX];
+    struct virtio_buffer bufs[2];
+    struct virtio_vsock_pkt* pkt;
+    int retval;
+
+    pkt =
+        virtio_vsock_alloc_pkt(VIRTIO_VSOCK_TYPE_STREAM, VIRTIO_VSOCK_OP_RW,
+                               buf, len, src_cid, src_port, dst_cid, dst_port);
+    if (!pkt) return ENOMEM;
+
+    bufs[0].phys_addr = __pa(&pkt->hdr);
+    bufs[0].size = sizeof(pkt->hdr);
+    bufs[0].write = 0;
+
+    bufs[1].phys_addr = __pa(pkt->buf);
+    bufs[1].size = pkt->len;
+    bufs[1].write = 0;
+
+    retval = virtqueue_add_buffers(vq, bufs, 2, pkt);
+    if (retval) {
+        virtio_vsock_free_pkt(pkt);
+        return -retval;
+    }
 
     virtqueue_kick(vq);
 
