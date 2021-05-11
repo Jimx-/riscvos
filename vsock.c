@@ -7,6 +7,8 @@
 
 #include "virtio_vsock.h"
 
+#define DEFAULT_RX_BUF_SIZE PG_SIZE
+
 static struct virtio_dev* vsock_dev;
 static struct virtio_vsock_config vsock_config;
 
@@ -19,6 +21,7 @@ enum {
 static struct virtio_queue* vqs[VSOCK_VQ_MAX];
 static int rx_buf_nr;
 static int rx_max_buf_nr;
+static size_t fwd_count;
 
 static uint32_t local_port = 8000;
 
@@ -30,9 +33,28 @@ struct virtio_vsock_pkt {
     size_t len;
 };
 
+static void (*recv_pkt_callback)(uint32_t, uint32_t, const char*, size_t);
+
 static void virtio_vsock_rx_done(struct virtio_queue* vq);
 static void virtio_vsock_tx_done(struct virtio_queue* vq);
 static void virtio_vsock_event_done(struct virtio_queue* vq);
+
+void virtio_vsock_set_recv_callback(void (*callback)(uint32_t, uint32_t,
+                                                     const char*, size_t))
+{
+    recv_pkt_callback = callback;
+}
+
+void virtio_vsock_dec_rx_pkt(struct virtio_vsock_pkt* pkt)
+{
+    fwd_count += pkt->hdr.len;
+}
+
+void virtio_vsock_inc_tx_pkt(struct virtio_vsock_pkt* pkt)
+{
+    pkt->hdr.buf_alloc = DEFAULT_RX_BUF_SIZE;
+    pkt->hdr.fwd_cnt = fwd_count;
+}
 
 static void virtio_vsock_free_pkt(struct virtio_vsock_pkt* pkt)
 {
@@ -42,7 +64,7 @@ static void virtio_vsock_free_pkt(struct virtio_vsock_pkt* pkt)
 
 static void virtio_vsock_fill_rx(void)
 {
-    size_t buf_len = PG_SIZE;
+    size_t buf_len = DEFAULT_RX_BUF_SIZE;
     struct virtio_queue* vq = vqs[VSOCK_VQ_RX];
     struct virtio_vsock_pkt* pkt;
     struct virtio_buffer bufs[2];
@@ -67,7 +89,7 @@ static void virtio_vsock_fill_rx(void)
         bufs[0].write = 1;
 
         bufs[1].phys_addr = __pa(pkt->buf);
-        bufs[1].size = sizeof(buf_len);
+        bufs[1].size = pkt->buf_len;
         bufs[1].write = 1;
 
         retval = virtqueue_add_buffers(vq, bufs, 2, pkt);
@@ -129,10 +151,18 @@ static void virtio_vsock_rx_done(struct virtio_queue* vq)
         }
 
         pkt->len = len - sizeof(pkt->hdr);
+
+        if (recv_pkt_callback && pkt->hdr.op == VIRTIO_VSOCK_OP_RW)
+            recv_pkt_callback(pkt->hdr.src_cid, pkt->hdr.src_port, pkt->buf,
+                              pkt->len);
+
+        virtio_vsock_dec_rx_pkt(pkt);
         virtio_vsock_free_pkt(pkt);
     }
 
     if (rx_buf_nr < rx_max_buf_nr / 2) virtio_vsock_fill_rx();
+
+    virtqueue_kick(vq);
 }
 
 static void virtio_vsock_tx_done(struct virtio_queue* vq)
@@ -199,6 +229,8 @@ int virtio_vsock_connect(uint32_t dst_cid, uint32_t dst_port)
                                  src_port, dst_cid, dst_port);
     if (!pkt) return ENOMEM;
 
+    virtio_vsock_inc_tx_pkt(pkt);
+
     buf.phys_addr = __pa(&pkt->hdr);
     buf.size = sizeof(pkt->hdr);
     buf.write = 0;
@@ -225,6 +257,8 @@ int virtio_vsock_send(uint32_t dst_cid, uint32_t dst_port, const char* buf,
         virtio_vsock_alloc_pkt(VIRTIO_VSOCK_TYPE_STREAM, VIRTIO_VSOCK_OP_RW,
                                buf, len, src_cid, src_port, dst_cid, dst_port);
     if (!pkt) return ENOMEM;
+
+    virtio_vsock_inc_tx_pkt(pkt);
 
     bufs[0].phys_addr = __pa(&pkt->hdr);
     bufs[0].size = sizeof(pkt->hdr);

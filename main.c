@@ -9,8 +9,6 @@
 
 #include "stackframe.h"
 
-uint8_t buf[4096];
-
 void kernel_main(unsigned int hart_id, void* dtb_phys)
 {
     void* dtb = __va(dtb_phys);
