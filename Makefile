@@ -10,11 +10,13 @@ include libfdt/Makefile.libfdt
 SRC_PATH	= .
 BUILD_PATH  = ./obj
 LIBSRCS		= lib/vsprintf.c lib/strlen.c lib/memcpy.c lib/memcmp.c lib/memchr.c lib/memmove.c \
-				lib/memset.c lib/strnlen.c lib/strrchr.c lib/strtoul.c lib/strchr.c lib/strcmp.c
+				lib/memset.c lib/strnlen.c lib/strrchr.c lib/strtoul.c lib/strchr.c lib/strcmp.c \
+				lib/assert.c
 EXTSRCS		= $(patsubst %.c, libfdt/%.c, $(LIBFDT_SRCS))
 SRCS		= head.S trap.S main.c fdt.c proc.c sched.c vm.c global.c direct_tty.c memory.c \
 				exc.c syscall.c irq.c timer.c user.c gate.S alloc.c slab.c virtio.c blk.c \
-				pci.c smp.c virtio_mmio.c virtio_pci.c vsock.c \
+				pci.c smp.c virtio_mmio.c virtio_pci.c vsock.c ivshmem.c ringbuf.c \
+				ssd/hostif.c ssd/hostif_nvme.c \
 				$(LIBSRCS) $(EXTSRCS)
 OBJS		= $(patsubst %.c, $(BUILD_PATH)/%.o, $(patsubst %.S, $(BUILD_PATH)/%.o, $(patsubst %.asm, $(BUILD_PATH)/%.o, $(SRCS))))
 
@@ -39,10 +41,10 @@ run :
 	@spike bbl
 
 qemu :
-	@qemu-system-riscv64 -M virt -kernel bbl -drive id=disk0,file=HD,if=none,format=raw -device virtio-blk-device,drive=disk0 -monitor stdio -bios none -device ivshmem-plain,memdev=hostmem -object memory-backend-file,size=1M,share,mem-path=/dev/shm/ivshmem,id=hostmem -device vhost-vsock-pci,guest-cid=3
+	@qemu-system-riscv64 -M virt -kernel bbl -drive id=disk0,file=HD,if=none,format=raw -device virtio-blk-device,drive=disk0 -monitor stdio -bios none -device ivshmem-plain,memdev=hostmem -object memory-backend-file,size=128M,share,mem-path=/dev/shm/ivshmem,id=hostmem -device vhost-vsock-pci,guest-cid=3
 
 qemudbg :
-	@qemu-system-riscv64 -M virt -kernel bbl -drive id=disk0,file=HD,if=none,format=raw -device virtio-blk-device,drive=disk0 -monitor stdio -bios none -device ivshmem-plain,memdev=hostmem -object memory-backend-file,size=1M,share,mem-path=/dev/shm/ivshmem,id=hostmem -device vhost-vsock-pci,guest-cid=3 -s -S
+	@qemu-system-riscv64 -M virt -kernel bbl -drive id=disk0,file=HD,if=none,format=raw -device virtio-blk-device,drive=disk0 -monitor stdio -bios none -device ivshmem-plain,memdev=hostmem -object memory-backend-file,size=128M,share,mem-path=/dev/shm/ivshmem,id=hostmem -device vhost-vsock-pci,guest-cid=3 -s -S
 
 clean :
 	rm $(KERNEL)
@@ -57,11 +59,12 @@ $(BUILD_PATH) :
 	mkdir $(BUILD_PATH)
 	mkdir $(BUILD_PATH)/lib
 	mkdir $(BUILD_PATH)/libfdt
+	mkdir $(BUILD_PATH)/ssd
 
 -include $(DEPS)
 
 $(BUILD_PATH)/%.o : $(SRC_PATH)/%.c
-	$(CC) $(CFLAGS) -MP -MMD -c $< -o $@
+	$(CC) $(CFLAGS) -MP -MMD -c -I${SRC_PATH} $< -o $@
 
 $(BUILD_PATH)/%.o : $(SRC_PATH)/%.S
 	$(CC) $(CFLAGS) -MP -MMD -c -D__ASSEMBLY__ -o $@ $<

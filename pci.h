@@ -1,6 +1,9 @@
 #ifndef _PCI_H_
 #define _PCI_H_
 
+#include <stddef.h>
+#include <stdint.h>
+
 struct pcibus {
     int busnr;
 

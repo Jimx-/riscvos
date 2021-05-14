@@ -7,7 +7,7 @@
 
 #include "smp.h"
 
-#include "stackframe.h"
+#include "ssd/hostif.h"
 
 void kernel_main(unsigned int hart_id, void* dtb_phys)
 {
@@ -26,7 +26,11 @@ void kernel_main(unsigned int hart_id, void* dtb_phys)
     init_irq_cpu(smp_processor_id());
     local_irq_enable();
 
+    init_ivshmem();
+
     init_vsock();
+
+    hostif_init();
 
     virtio_vsock_connect(2, 9999);
 

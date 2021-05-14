@@ -88,4 +88,7 @@ int virtio_vsock_connect(uint32_t dst_cid, uint32_t dst_port);
 int virtio_vsock_send(uint32_t dst_cid, uint32_t dst_port, const char* buf,
                       size_t len);
 
+/* ivshmem.c */
+int init_ivshmem(void);
+
 #endif
