@@ -1,11 +1,11 @@
+#include "const.h"
 #include "global.h"
 #include "irq.h"
 #include "pci.h"
 #include "proto.h"
+#include "smp.h"
 #include "virtio.h"
 #include "vm.h"
-
-#include "smp.h"
 
 #include "ssd/hostif.h"
 
@@ -32,7 +32,7 @@ void kernel_main(unsigned int hart_id, void* dtb_phys)
 
     hostif_init();
 
-    virtio_vsock_connect(2, 9999);
+    virtio_vsock_connect(VSOCK_HOST_CID, VSOCK_HOST_PORT);
 
     /* init_blkdev(); */
 

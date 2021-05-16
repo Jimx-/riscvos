@@ -9,6 +9,23 @@ static unsigned short aq_cq_depth;
 static uint64_t aq_sq_dma_addr;
 static uint64_t aq_cq_dma_addr;
 
+static uint32_t csts_reg;
+
+void nvme_process_read_message(uint64_t addr, uint32_t id)
+{
+    void* buf = NULL;
+    size_t len = 0;
+
+    switch (addr) {
+    case NVME_REG_CSTS:
+        buf = &csts_reg;
+        len = sizeof(csts_reg);
+        break;
+    }
+
+    hostif_complete_host_read(id, buf, len);
+}
+
 void nvme_process_write_message(uint64_t addr, const char* buf, size_t len)
 {
     uint32_t u32;

@@ -23,4 +23,7 @@
 
 #define PATH_MAX 256
 
+#define VSOCK_HOST_CID 2
+#define VSOCK_HOST_PORT 9999
+
 #endif
